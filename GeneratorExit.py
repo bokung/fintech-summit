@@ -1,2 +1,2 @@
 GeneratorExit
-print("test")
+print("test2")
