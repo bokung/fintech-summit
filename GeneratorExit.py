@@ -1,0 +1,2 @@
+GeneratorExit
+print("test")
