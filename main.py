@@ -1,5 +1,6 @@
 import xrpl
 from xrpl.clients import JsonRpcClient
+from xrpl.transaction import submit_and_wait
 from xrpl.wallet import generate_faucet_wallet
 from xrpl.core.addresscodec import classic_address_to_xaddress
 from xrpl.models.requests import AccountLines
