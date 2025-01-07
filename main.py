@@ -13,15 +13,68 @@ from xrpl.models.amounts import IssuedCurrencyAmount
 from xrpl.transaction import submit_and_wait
 from xrpl.utils import xrp_to_drops
 
+
 JSON_RPC_URL = "https://testnet.xrpl-labs.com/"
 client = JsonRpcClient(JSON_RPC_URL)
 
 # Create wallets
-creator_wallet = generate_faucet_wallet(client=client, debug=True)
-company_wallet = generate_faucet_wallet(client=client, debug=True)
+import json
+import os
+from xrpl.wallet import Wallet
+from xrpl.core import keypairs
+from xrpl.clients import JsonRpcClient
+from xrpl.wallet import generate_faucet_wallet
+
+# File paths to save wallet data
+CREATOR_WALLET_FILE = "creator_wallet.json"
+COMPANY_WALLET_FILE = "company_wallet.json"
+
+def save_wallet_to_file(wallet, file_path):
+    """Save wallet's seed and classic address to a file."""
+    wallet_data = {
+        "seed": wallet.seed,
+        "classic_address": wallet.classic_address,
+    }
+    with open(file_path, "w") as f:
+        json.dump(wallet_data, f)
+    print(f"Wallet saved to {file_path}")
+
+def load_wallet_from_file(file_path):
+    """Load wallet information from a file and reconstruct the Wallet object."""
+    with open(file_path, "r") as f:
+        wallet_data = json.load(f)
+    # Derive keys from the seed
+    public_key, private_key = keypairs.derive_keypair(wallet_data["seed"])
+    # Reconstruct the wallet using the derived keys
+    return Wallet(
+        seed=wallet_data["seed"],
+        public_key=public_key,
+        private_key=private_key
+    )
+
+def get_or_generate_wallet(file_path, client):
+    """Load wallet from file or generate a new one if not available."""
+    if os.path.exists(file_path):
+        print(f"Loading wallet from {file_path}...")
+        return load_wallet_from_file(file_path)
+    else:
+        print(f"Generating new wallet and saving to {file_path}...")
+        wallet = generate_faucet_wallet(client=client, debug=True)
+        save_wallet_to_file(wallet, file_path)
+        return wallet
+
+# Initialize client
+JSON_RPC_URL = "https://testnet.xrpl-labs.com/"
+client = JsonRpcClient(JSON_RPC_URL)
+
+# Load or generate wallets
+creator_wallet = get_or_generate_wallet(CREATOR_WALLET_FILE, client)
+company_wallet = get_or_generate_wallet(COMPANY_WALLET_FILE, client)
 
 print(f"Creator Address: {creator_wallet.classic_address}")
 print(f"Company Address: {company_wallet.classic_address}")
+
+
 
 # Configure issuer settings
 issuer_settings_tx = AccountSet(
