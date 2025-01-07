@@ -6,7 +6,7 @@ import xrpl
 from xrpl.clients import JsonRpcClient
 from xrpl.wallet import generate_faucet_wallet, Wallet
 from xrpl.core import keypairs
-from xrpl.models.requests import AccountLines, BookOffers
+from xrpl.models.requests import AccountLines, BookOffers, AccountInfo
 from xrpl.models.transactions import (
     Payment,
     TrustSet,
@@ -15,9 +15,8 @@ from xrpl.models.transactions import (
 )
 from xrpl.models.amounts import IssuedCurrencyAmount
 from xrpl.transaction import submit_and_wait
-from xrpl.utils import xrp_to_drops
-from xrpl.models.requests import AccountInfo
-from xrpl.utils import drops_to_xrp
+from xrpl.utils import xrp_to_drops, drops_to_xrp
+from xrpl.transaction import XRPLReliableSubmissionException
 
 # -----------------------------------------------------------------------------
 # Configuration
@@ -27,13 +26,13 @@ app = Flask(__name__)
 app.secret_key = "SUPER_SECRET_KEY"  # Replace with a secure key in production
 
 # XRPL testnet client
-JSON_RPC_URL = "https://testnet.xrpl-labs.com/"
+JSON_RPC_URL = "https://s.altnet.rippletest.net:51234"
 client = JsonRpcClient(JSON_RPC_URL)
 
 # Currency Code
 CURRENCY_CODE = "USD"
 
-# The file for storing your "issuer" wallet (i.e., creator wallet)
+# File for storing your "issuer" wallet (creator wallet)
 CREATOR_WALLET_FILE = "creator_wallet.json"
 
 # -----------------------------------------------------------------------------
@@ -52,14 +51,12 @@ def save_wallet_to_file(wallet: Wallet, file_path: str) -> None:
 def load_wallet_from_file(file_path):
     with open(file_path, "r") as f:
         wallet_data = json.load(f)
-    # Just load from seed in newer versions of xrpl-py
     return Wallet.from_seed(wallet_data["seed"])
-
 
 def get_or_generate_creator_wallet() -> Wallet:
     """
-    Load or generate the "creator/issuer" wallet (your main wallet). 
-    This wallet issues the CarbonCredits (USD).
+    Load or generate the "creator/issuer" wallet (your main wallet).
+    This wallet issues the USD tokens.
     """
     if os.path.exists(CREATOR_WALLET_FILE):
         creator_wallet = load_wallet_from_file(CREATOR_WALLET_FILE)
@@ -90,8 +87,6 @@ def load_user_wallet() -> Wallet:
     wdata = session["user_wallet"]
     return Wallet.from_seed(wdata["seed"])
 
-
-
 def get_token_balance(address: str, issuer: str, currency: str) -> str:
     """
     Retrieve the balance of a given (issuer, currency) for a specific address.
@@ -103,13 +98,35 @@ def get_token_balance(address: str, issuer: str, currency: str) -> str:
     response = client.request(request)
     lines = response.result.get("lines", [])
     for line in lines:
-        if line['account'] == issuer and line['currency'] == currency:
-            return line['balance']
+        if line["account"] == issuer and line["currency"] == currency:
+            return line["balance"]
     return "0"
+
+def fund_user_with_tokens(issuer_wallet: Wallet, user_wallet: Wallet, amount: str = "1000"):
+    """
+    Send 'amount' of the issuer's USD tokens to the user,
+    so that the user can sell them.
+    """
+    payment_tx = Payment(
+        account=issuer_wallet.classic_address,
+        destination=user_wallet.classic_address,
+        amount=IssuedCurrencyAmount(
+            currency=CURRENCY_CODE,
+            issuer=issuer_wallet.classic_address,
+            value=amount
+        )
+    )
+    tx_response = submit_and_wait(payment_tx, client, issuer_wallet)
+    
+    # Check if it was successful:
+    tx_result = tx_response.result["meta"]["TransactionResult"]
+    if tx_result != "tesSUCCESS":
+        raise Exception(f"Issuance failed with code: {tx_result}")
 
 def create_sell_offer(wallet: Wallet, currency_amount: float, xrp_price: float):
     """
-    Create an offer to sell 'currency_amount' of the issuer's token for 'xrp_price' XRP
+    Create an offer to sell 'currency_amount' of the issuer's token
+    for 'xrp_price' XRP.
     """
     offer_tx = OfferCreate(
         account=wallet.classic_address,
@@ -120,11 +137,15 @@ def create_sell_offer(wallet: Wallet, currency_amount: float, xrp_price: float):
             value=str(currency_amount)
         )
     )
-    return submit_and_wait(offer_tx, client, wallet)
+    tx_response = submit_and_wait(offer_tx, client, wallet)
+    # Check result code
+    tx_result = tx_response.result["meta"]["TransactionResult"]
+    return tx_response, tx_result
 
 def create_buy_offer(wallet: Wallet, currency_amount: float, xrp_price: float):
     """
-    Create an offer to buy 'currency_amount' of the issuer's token for 'xrp_price' XRP
+    Create an offer to buy 'currency_amount' of the issuer's token
+    by paying 'xrp_price' XRP.
     """
     offer_tx = OfferCreate(
         account=wallet.classic_address,
@@ -135,12 +156,15 @@ def create_buy_offer(wallet: Wallet, currency_amount: float, xrp_price: float):
         ),
         taker_pays=xrp_to_drops(xrp_price)
     )
-    return submit_and_wait(offer_tx, client, wallet)
+    tx_response = submit_and_wait(offer_tx, client, wallet)
+    # Check result code
+    tx_result = tx_response.result["meta"]["TransactionResult"]
+    return tx_response, tx_result
 
 def get_order_book():
     """
-    Get the current order book for CarbonCredits (USD) vs XRP
-    The book is: TakerGets: CarbonCredits (USD), TakerPays: XRP
+    Get the current order book for USD (CarbonCredits) vs XRP
+    The book is: TakerGets: USD, TakerPays: XRP
     """
     request = BookOffers(
         taker_gets=IssuedCurrencyAmount(
@@ -160,8 +184,7 @@ def get_order_book():
 def configure_issuer():
     """
     Configure the issuer wallet to enable rippling (if not already done).
-    Also create a trust line from the user to the issuer so we can hold tokens.
-    For demonstration, we'll set a big trust line limit (like 1,000,000).
+    Also create a trust line from the user to the issuer (if not done).
     """
     creator_wallet = get_or_generate_creator_wallet()
 
@@ -172,7 +195,7 @@ def configure_issuer():
     )
     try:
         submit_and_wait(issuer_settings_tx, client, creator_wallet)
-    except xrpl.transaction.exceptions.XRPLReliableSubmissionException:
+    except XRPLReliableSubmissionException:
         # If it's already set, we can ignore the error
         pass
 
@@ -191,6 +214,7 @@ def index():
     <ul>
       <li><a href="{{ url_for('create_wallet') }}">Create a new user wallet</a></li>
       <li><a href="{{ url_for('wallet_info') }}">View my wallet info</a></li>
+      <li><a href="{{ url_for('fund_tokens') }}">Fund user wallet with USD tokens</a></li>
       <li><a href="{{ url_for('create_offer') }}">Buy or Sell Carbon Credits</a></li>
       <li><a href="{{ url_for('order_book') }}">View current order book</a></li>
     </ul>
@@ -206,10 +230,48 @@ def create_wallet():
     flash(f"New wallet created. Address: {user_w['classic_address']}", "info")
     return redirect(url_for("wallet_info"))
 
+@app.route("/fund_tokens", methods=["GET"])
+def fund_tokens():
+    """
+    Explicit route to fund the user wallet with some USD tokens.
+    """
+    user_wallet = load_user_wallet()
+    if not user_wallet:
+        flash("No user wallet found. Please create one first.", "error")
+        return redirect(url_for("index"))
+
+    # Make sure issuer is set up
+    configure_issuer()
+    creator_wallet = get_or_generate_creator_wallet()
+
+    try:
+        # The user must have a trust line first:
+        trust_set_tx = TrustSet(
+            account=user_wallet.classic_address,
+            limit_amount=IssuedCurrencyAmount(
+                currency=CURRENCY_CODE,
+                issuer=creator_wallet.classic_address,
+                value="1000000"  # big trust limit
+            )
+        )
+        ts_response = submit_and_wait(trust_set_tx, client, user_wallet)
+        ts_result = ts_response.result["meta"]["TransactionResult"]
+        if ts_result != "tesSUCCESS":
+            flash(f"TrustSet failed with code: {ts_result}", "error")
+            return redirect(url_for("index"))
+
+        # Now fund the user with 1000 USD tokens
+        fund_user_with_tokens(creator_wallet, user_wallet, "1000")
+        flash("Successfully funded user with 1000 USD tokens.", "info")
+    except Exception as e:
+        flash(f"Error funding tokens: {str(e)}", "error")
+
+    return redirect(url_for("wallet_info"))
+
 @app.route("/wallet_info", methods=["GET"])
 def wallet_info():
     """
-    Show the user's wallet info: address, XRPL faucet balance, and token balance.
+    Show the user's wallet info: address, XRP faucet balance, token balance.
     If no wallet is found in session, ask the user to create one.
     """
     user_wallet = load_user_wallet()
@@ -220,9 +282,8 @@ def wallet_info():
     configure_issuer()
 
     creator_wallet = get_or_generate_creator_wallet()
-    xrp_balance = "0"
-    token_balance = "0"
-
+    
+    # Get XRP balance
     req = AccountInfo(
         account=user_wallet.classic_address,
         ledger_index="validated",
@@ -231,22 +292,12 @@ def wallet_info():
     response = client.request(req)
     xrp_balance = drops_to_xrp(response.result["account_data"]["Balance"])
 
-    # Ensure a trust line from user to the issuer
-    try:
-        trust_set_tx = TrustSet(
-            account=user_wallet.classic_address,
-            limit_amount=IssuedCurrencyAmount(
-                currency=CURRENCY_CODE,
-                issuer=creator_wallet.classic_address,
-                value="1000000"  # large limit
-            )
-        )
-        submit_and_wait(trust_set_tx, client, user_wallet)
-    except xrpl.transaction.exceptions.XRPLReliableSubmissionException:
-        pass  # If trust line is already set
-
-    # Now fetch the token balance
-    token_balance = get_token_balance(user_wallet.classic_address, creator_wallet.classic_address, CURRENCY_CODE)
+    # Get token balance
+    token_balance = get_token_balance(
+        user_wallet.classic_address,
+        creator_wallet.classic_address,
+        CURRENCY_CODE
+    )
 
     html = f"""
     <h2>Wallet Info</h2>
@@ -260,7 +311,7 @@ def wallet_info():
 @app.route("/create_offer", methods=["GET", "POST"])
 def create_offer():
     """
-    Allow user to create a Buy or Sell offer.
+    Allow user to create a Buy or Sell offer for USD tokens.
     """
     user_wallet = load_user_wallet()
     if not user_wallet:
@@ -271,14 +322,22 @@ def create_offer():
         amount = float(request.form.get("amount"))
         xrp_price = float(request.form.get("xrp_price"))
 
-        if offer_type == "sell":
-            tx_response = create_sell_offer(user_wallet, amount, xrp_price)
-            flash(f"Sell offer created. {tx_response.result}", "info")
-        elif offer_type == "buy":
-            tx_response = create_buy_offer(user_wallet, amount, xrp_price)
-            flash(f"Buy offer created. {tx_response.result}", "info")
-        else:
-            flash("Unknown offer type.", "error")
+        try:
+            if offer_type == "sell":
+                tx_response, tx_result = create_sell_offer(user_wallet, amount, xrp_price)
+            elif offer_type == "buy":
+                tx_response, tx_result = create_buy_offer(user_wallet, amount, xrp_price)
+            else:
+                flash("Unknown offer type.", "error")
+                return redirect(url_for("create_offer"))
+
+            if tx_result == "tesSUCCESS":
+                flash(f"{offer_type.capitalize()} offer succeeded. Transaction: {tx_response.result}", "info")
+            else:
+                flash(f"{offer_type.capitalize()} offer failed with code: {tx_result}", "error")
+
+        except Exception as e:
+            flash(f"Error creating the offer: {str(e)}", "error")
 
         return redirect(url_for("wallet_info"))
 
@@ -287,15 +346,15 @@ def create_offer():
     <form method="POST">
       <label>Offer Type:</label><br/>
       <select name="offer_type">
-        <option value="sell">Sell CarbonCredits</option>
-        <option value="buy">Buy CarbonCredits</option>
+        <option value="sell">Sell CarbonCredits (USD)</option>
+        <option value="buy">Buy CarbonCredits (USD)</option>
       </select><br/><br/>
       
       <label>CarbonCredits (USD) amount:</label><br/>
-      <input type="text" name="amount"/><br/><br/>
+      <input type="text" name="amount" required/><br/><br/>
       
       <label>XRP amount (price):</label><br/>
-      <input type="text" name="xrp_price"/><br/><br/>
+      <input type="text" name="xrp_price" required/><br/><br/>
       
       <input type="submit" value="Submit"/>
     </form>
@@ -312,15 +371,16 @@ def order_book():
     offers = ob.get("offers", [])
     rows = []
     for o in offers:
-        # Each offer in the book has fields like 'TakerPays', 'TakerGets', etc.
-        # Depending on whether TakerGets is XRP or the token, you interpret differently.
         rows.append(str(o))
 
-    html = "<h2>Order Book for CarbonCredits (USD) / XRP</h2>"
-    html += "<ul>"
-    for row in rows:
-        html += f"<li>{row}</li>"
-    html += "</ul>"
+    html = "<h2>Order Book (USD / XRP)</h2>"
+    if not offers:
+        html += "<p>No offers found on this side of the book.</p>"
+    else:
+        html += "<ul>"
+        for row in rows:
+            html += f"<li>{row}</li>"
+        html += "</ul>"
     html += '<p><a href="/">Return Home</a></p>'
     return render_template_string(html)
 
