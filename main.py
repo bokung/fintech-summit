@@ -13,7 +13,7 @@ from xrpl.models.amounts import IssuedCurrencyAmount
 from xrpl.transaction import submit_and_wait
 from xrpl.utils import xrp_to_drops
 
-JSON_RPC_URL = "https://s.altnet.rippletest.net:51234"
+JSON_RPC_URL = "https://testnet.xrpl-labs.com/"
 client = JsonRpcClient(JSON_RPC_URL)
 
 # Create wallets
@@ -58,13 +58,16 @@ print("\nTrustSet response:", trust_set_response.result)
 # Issue initial supply of CarbonCredits
 issue_tx = Payment(
     account=creator_wallet.classic_address,
-    destination=creator_wallet.classic_address,
+    destination=company_wallet.classic_address,  # Send IOUs to Company
     amount=IssuedCurrencyAmount(
         currency=CURRENCY_CODE,
         issuer=creator_wallet.classic_address,
-        value="1000"  # Initial supply
+        value="1000"
     )
 )
+
+
+
 
 issue_response = submit_and_wait(
     issue_tx,

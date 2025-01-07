@@ -1,2 +1,0 @@
-GeneratorExit
-print("test2")
