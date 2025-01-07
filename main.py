@@ -37,7 +37,7 @@ issuer_settings_response = submit_and_wait(
 print("\nIssuer settings response:", issuer_settings_response.result)
 
 # Create trust line
-CURRENCY_CODE = "CarbonCredit"
+CURRENCY_CODE = "USD"
 
 trust_set_tx = TrustSet(
     account=company_wallet.classic_address,
