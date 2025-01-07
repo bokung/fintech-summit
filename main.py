@@ -186,7 +186,7 @@ print("\nCreating sell offer...")
 sell_response = create_sell_offer(
     creator_wallet,
     currency_amount=100,  # Selling 100 CarbonCredits
-    xrp_price=1000       # For 1000 XRP
+    xrp_price=10       # For 1000 XRP
 )
 print("Sell offer response:", sell_response.result)
 
@@ -195,7 +195,7 @@ print("\nCreating buy offer...")
 buy_response = create_buy_offer(
     company_wallet,
     currency_amount=50,   # Buying 50 CarbonCredits
-    xrp_price=450        # Offering 450 XRP
+    xrp_price=5        # Offering 450 XRP
 )
 print("Buy offer response:", buy_response.result)
 

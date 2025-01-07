@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Carbon Credits Demo</title>
+</head>
+<body>
+    <h1>Carbon Credits on the XRPL (Demo)</h1>
+    <ul>
+        <li><a href="{{ url_for('create_wallet') }}">Create a new user wallet</a></li>
+        <li><a href="{{ url_for('wallet_info') }}">View my wallet info</a></li>
+        <li><a href="{{ url_for('create_offer') }}">Buy or Sell Carbon Credits</a></li>
+        <li><a href="{{ url_for('order_book') }}">View current order book</a></li>
+    </ul>
+    <hr/>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul>
+          {% for category, message in messages %}
+            <li><strong>{{ category }}:</strong> {{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+</body>
+</html>
