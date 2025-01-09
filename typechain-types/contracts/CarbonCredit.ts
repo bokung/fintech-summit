@@ -30,6 +30,8 @@ export interface CarbonCreditInterface extends Interface {
       | "balanceOf"
       | "credits"
       | "getApproved"
+      | "getTokenIdsInMarketplace"
+      | "getTokenIdsOfOwner"
       | "isApprovedForAll"
       | "isUsed"
       | "mintCarbonCredit"
@@ -76,6 +78,14 @@ export interface CarbonCreditInterface extends Interface {
   encodeFunctionData(
     functionFragment: "getApproved",
     values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getTokenIdsInMarketplace",
+    values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getTokenIdsOfOwner",
+    values: [AddressLike]
   ): string;
   encodeFunctionData(
     functionFragment: "isApprovedForAll",
@@ -150,6 +160,14 @@ export interface CarbonCreditInterface extends Interface {
   decodeFunctionResult(functionFragment: "credits", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "getApproved",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getTokenIdsInMarketplace",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getTokenIdsOfOwner",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -370,6 +388,18 @@ export interface CarbonCredit extends BaseContract {
 
   getApproved: TypedContractMethod<[tokenId: BigNumberish], [string], "view">;
 
+  getTokenIdsInMarketplace: TypedContractMethod<
+    [marketplaceAddress: AddressLike],
+    [bigint[]],
+    "view"
+  >;
+
+  getTokenIdsOfOwner: TypedContractMethod<
+    [_owner: AddressLike],
+    [bigint[]],
+    "view"
+  >;
+
   isApprovedForAll: TypedContractMethod<
     [owner: AddressLike, operator: AddressLike],
     [boolean],
@@ -477,6 +507,12 @@ export interface CarbonCredit extends BaseContract {
   getFunction(
     nameOrSignature: "getApproved"
   ): TypedContractMethod<[tokenId: BigNumberish], [string], "view">;
+  getFunction(
+    nameOrSignature: "getTokenIdsInMarketplace"
+  ): TypedContractMethod<[marketplaceAddress: AddressLike], [bigint[]], "view">;
+  getFunction(
+    nameOrSignature: "getTokenIdsOfOwner"
+  ): TypedContractMethod<[_owner: AddressLike], [bigint[]], "view">;
   getFunction(
     nameOrSignature: "isApprovedForAll"
   ): TypedContractMethod<

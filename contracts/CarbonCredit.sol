@@ -153,4 +153,42 @@ contract CarbonCredit is ERC721URIStorage, Ownable {
     function usedOnDetails(uint256 tokenId) external view returns (string memory) {
         return credits[tokenId].usedOn;
     }
+
+    // ------------------------------------------------------------------------
+    // NEW FUNCTIONS: Listing token IDs owned by any address or by the marketplace
+    // ------------------------------------------------------------------------
+
+    /**
+     * @notice Get all token IDs owned by a given address.
+     * @dev This does a simple loop from 1 to (nextTokenId-1), which may be expensive
+     *      for large numbers of tokens. It is a view function, so it costs no gas
+     *      when called off-chain, but can use significant computation.
+     * @param _owner Address whose tokens we want to enumerate.
+     */
+    function getTokenIdsOfOwner(address _owner) external view returns (uint256[] memory) {
+        uint256 balance = balanceOf(_owner);
+        uint256[] memory tokenIds = new uint256[](balance);
+
+        uint256 idx = 0;
+        // Loop through all possible token IDs
+        for (uint256 tokenId = 1; tokenId < nextTokenId; tokenId++) {
+            if (ownerOf(tokenId) == _owner) {
+                tokenIds[idx] = tokenId;
+                idx++;
+                // Stop if we've found them all
+                if (idx == balance) {
+                    break;
+                }
+            }
+        }
+        return tokenIds;
+    }
+
+    /**
+     * @notice Get all token IDs owned by the marketplace (if you know its address).
+     * @param marketplaceAddress The address of the marketplace contract.
+     */
+    function getTokenIdsInMarketplace(address marketplaceAddress) external view returns (uint256[] memory) {
+        return this.getTokenIdsOfOwner(marketplaceAddress);
+    }
 }
