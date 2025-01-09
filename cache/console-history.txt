@@ -1,0 +1,19 @@
+console.log(await carbonCredit.ownerOf(1));
+console.log(carbonCredit.ownerOf(1));
+;
+const tokenOwner = await carbonCredit.ownerOf(1)
+await carbonCredit.mintCarbonCreditsBatch("0xe7f1725e7734ce288f8367e1bb143e90bb3f0512", 10, 'hello');
+await carbonCredit.mintCarbonCreditsBatch("0xe7f1725e7734ce288f8367e1bb143e90bb3f0512", 10, 1);
+await carbonCredit.mintCarbonCreditsBatch("0xRecipientAddress", 5, "https://example-uri.com/");
+console.log(await carbonCredit.owner());
+const marketplace = await Marketplace.attach("0xe7f1725e7734ce288f8367e1bb143e90bb3f0512");
+const Marketplace = await ethers.getContractFactory("CarbonCreditMarketplace");
+const carbonCredit = await CarbonCredit.attach("0x5fbdb2315678afecb367f032d93f642f64180aa3");
+CarbonCredit
+const CarbonCredit = await ethers.getContractFactory("CarbonCredit");
+console.log(x)
+const x = 10
+int x = 10;
+CarbonCredit.name()
+console.log('hi')
+console.log
