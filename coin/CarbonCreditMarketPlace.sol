@@ -2,21 +2,27 @@
 pragma solidity ^0.8.0;
 
 import "./CarbonCredit.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
+/**
+ * @title CarbonCreditMarketplace
+ * @dev A marketplace that only accepts a wrapped XRPL ERC-20 token for buying carbon credits.
+ *
+ * NOTE: This assumes you have an ERC-20 token contract that represents XRPL in the Ethereum ecosystem.
+ *       Buyers must "approve" this contract to spend their XRPL tokens before calling `buyCredit`.
+ */
 contract CarbonCreditMarketplace is IERC721Receiver {
 
-    CarbonCredit public carbonCreditContract;
+    CarbonCredit public carbonCreditContract;  // The NFT contract
+    IERC20 public xrplToken;                   // The ERC-20 token representing XRPL on Ethereum
     address public owner;
 
-    // Mapping of tokenId => sale price. 0 means not for sale.
+    // Mapping of tokenId => sale price in XRPL tokens. 0 => not for sale.
     mapping(uint256 => uint256) public creditsForSale;
 
     // Keep track of which tokenIds are “actively” listed (price > 0).
-    // This helps us iterate to build a list of current listings.
     uint256[] private _listedTokens;
-    // We'll also use a secondary mapping for quick “is listed” checks
-    // so we can safely remove from _listedTokens, etc.
     mapping(uint256 => bool) private _isListed;
 
     // Used in getAllListings to return structured data
@@ -29,8 +35,13 @@ contract CarbonCreditMarketplace is IERC721Receiver {
     event CreditListed(uint256 indexed tokenId, uint256 price);
     event CreditSold(uint256 indexed tokenId, address buyer, uint256 price);
 
-    constructor(address carbonCreditAddress) {
+    /**
+     * @param carbonCreditAddress The address of the deployed CarbonCredit NFT contract.
+     * @param xrplTokenAddress The address of the ERC-20 "XRPL" token contract.
+     */
+    constructor(address carbonCreditAddress, address xrplTokenAddress) {
         carbonCreditContract = CarbonCredit(carbonCreditAddress);
+        xrplToken = IERC20(xrplTokenAddress);
         owner = msg.sender;
     }
 
@@ -40,18 +51,20 @@ contract CarbonCreditMarketplace is IERC721Receiver {
     }
 
     /**
-     * @notice List a carbon credit for sale.
+     * @notice List a carbon credit for sale in XRPL tokens.
      * @param tokenId The ID of the carbon credit NFT.
-     * @param price The minimum price (in wei).
+     * @param price The minimum price (in XRPL tokens).
      */
     function listCreditForSale(uint256 tokenId, uint256 price) external onlyOwner {
-        require(carbonCreditContract.ownerOf(tokenId) == address(this),
+        // Marketplace must own the NFT to sell it
+        require(
+            carbonCreditContract.ownerOf(tokenId) == address(this),
             "Marketplace does not own this credit"
         );
 
         creditsForSale[tokenId] = price;
 
-        // If it’s newly listed, add to _listedTokens
+        // If it's newly listed, track it
         if (!_isListed[tokenId]) {
             _listedTokens.push(tokenId);
             _isListed[tokenId] = true;
@@ -61,34 +74,40 @@ contract CarbonCreditMarketplace is IERC721Receiver {
     }
 
     /**
-     * @notice Buy a carbon credit from the marketplace by making an offer.
-     * @dev The buyer sends `offerPrice` in `msg.value`.
-     *      If `offerPrice >= creditsForSale[tokenId]`, the sale is accepted automatically.
+     * @notice Buy a carbon credit using XRPL tokens.
+     * @dev The buyer must have approved this marketplace to spend `offerPrice` XRPL tokens beforehand.
      * @param tokenId The ID of the carbon credit NFT.
-     * @param offerPrice The amount (in wei) the buyer is offering to pay.
+     * @param offerPrice The amount (in XRPL tokens) the buyer is offering to pay.
      */
-    function buyCredit(uint256 tokenId, uint256 offerPrice) external payable {
+    function buyCredit(uint256 tokenId, uint256 offerPrice) external {
         uint256 listingPrice = creditsForSale[tokenId];
         require(listingPrice > 0, "Credit not for sale");
         require(offerPrice >= listingPrice, "Offer price is too low");
 
+        // Transfer XRPL tokens from the buyer to this contract
+        bool success = xrplToken.transferFrom(msg.sender, address(this), offerPrice);
+        require(success, "XRPL token transfer failed");
+
         // Transfer the NFT to the buyer
         carbonCreditContract.safeTransferFrom(address(this), msg.sender, tokenId);
 
-        // Mark it as no longer for sale
+        // Remove the sale listing
         creditsForSale[tokenId] = 0;
-
-        // Remove tokenId from the active listings array
         _removeTokenFromList(tokenId);
 
         emit CreditSold(tokenId, msg.sender, offerPrice);
     }
 
     /**
-     * @notice Withdraw all marketplace funds (ETH) to the owner.
+     * @notice Withdraw XRPL tokens from the contract to the owner.
+     * @param amount The amount of XRPL tokens to withdraw.
      */
-    function withdrawFunds() external onlyOwner {
-        payable(owner).transfer(address(this).balance);
+    function withdrawFunds(uint256 amount) external onlyOwner {
+        require(amount > 0, "Amount must be > 0");
+        require(xrplToken.balanceOf(address(this)) >= amount, "Not enough XRPL tokens in contract");
+
+        bool success = xrplToken.transfer(owner, amount);
+        require(success, "Withdraw transfer failed");
     }
 
     /**
@@ -100,11 +119,9 @@ contract CarbonCreditMarketplace is IERC721Receiver {
 
     /**
      * @notice View function to get all active listings sorted by price (ascending).
-     * @dev Sorting on-chain can be expensive, but since this is a view function,
-     *      you can call it off-chain for free (except for node resources).
+     * @dev Sorting on-chain can be expensive, but it is a view function so no gas cost to the caller.
      */
     function getAllListingsSortedByPrice() external view returns (MarketItem[] memory) {
-        // First, build an array of the items that are actually for sale (price > 0).
         uint256 activeCount;
         for (uint256 i = 0; i < _listedTokens.length; i++) {
             if (creditsForSale[_listedTokens[i]] > 0) {
@@ -113,34 +130,26 @@ contract CarbonCreditMarketplace is IERC721Receiver {
         }
 
         MarketItem[] memory items = new MarketItem[](activeCount);
-
         uint256 index = 0;
         for (uint256 i = 0; i < _listedTokens.length; i++) {
             uint256 tid = _listedTokens[i];
             uint256 p = creditsForSale[tid];
             if (p > 0) {
-                items[index] = MarketItem({
-                    tokenId: tid,
-                    price: p
-                });
+                items[index] = MarketItem({ tokenId: tid, price: p });
                 index++;
             }
         }
 
-        // Now sort the MarketItem[] by price ascending
         _sortMarketItemsByPrice(items);
-
         return items;
     }
 
     /**
-     * @notice Remove a token from the _listedTokens array (i.e., once sold or delisted).
+     * @dev Internal function to remove a token from the _listedTokens array once sold/delisted.
      */
     function _removeTokenFromList(uint256 tokenId) internal {
-        // Mark not listed
         _isListed[tokenId] = false;
 
-        // Find it in _listedTokens; remove it by swapping with the last, then pop.
         for (uint256 i = 0; i < _listedTokens.length; i++) {
             if (_listedTokens[i] == tokenId) {
                 _listedTokens[i] = _listedTokens[_listedTokens.length - 1];
@@ -151,14 +160,12 @@ contract CarbonCreditMarketplace is IERC721Receiver {
     }
 
     /**
-     * @notice Simple in-memory insertion sort of MarketItem[] by ascending price.
+     * @dev Simple in-memory insertion sort of MarketItem[] by ascending price.
      */
     function _sortMarketItemsByPrice(MarketItem[] memory items) internal pure {
-        // Insertion sort
         for (uint256 i = 1; i < items.length; i++) {
             MarketItem memory current = items[i];
             uint256 j = i;
-            // Move elements of items[0..i-1], that are greater than current.price, to one position ahead.
             while (j > 0 && items[j - 1].price > current.price) {
                 items[j] = items[j - 1];
                 j--;
@@ -168,7 +175,7 @@ contract CarbonCreditMarketplace is IERC721Receiver {
     }
 
     /**
-     * @notice ERC721Receiver callback function. Required for safeTransferFrom to this contract.
+     * @notice Required callback for receiving ERC-721 tokens via safeTransferFrom.
      */
     function onERC721Received(
         address /*operator*/,
