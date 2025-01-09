@@ -1,15 +1,20 @@
 // File: src/App.js
 import React, { useState, useEffect } from "react";
-import { ethers } from "ethers";
+import {
+  BrowserProvider,
+  Contract,
+  parseUnits,
+  formatUnits
+} from "ethers";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 // --- Import the ABI JSON for each contract
 import carbonCreditABI from "./contracts/CarbonCredit.json";
 import marketplaceABI from "./contracts/CarbonCreditMarketplace.json";
 
-// You should update these to match what was printed by your Hardhat deploy script!
-const CARBON_CREDIT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; 
-const MARKETPLACE_ADDRESS   = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"; 
+// You should update these to match what was printed by your Hardhat (or similar) deploy script!
+const CARBON_CREDIT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+const MARKETPLACE_ADDRESS   = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
 
 function App() {
   // ---------------------------------------------
@@ -43,24 +48,27 @@ function App() {
   useEffect(() => {
     const init = async () => {
       if (!window.ethereum) {
-        console.error("MetaMask not detected!");
+        console.error("MetaMask (or another Ethereum provider) not detected!");
         return;
       }
 
       try {
         // Request user to connect their wallet
-        await window.ethereum.request({ method: 'eth_requestAccounts' });
-        const _provider = new ethers.providers.Web3Provider(window.ethereum);
-        const _signer = _provider.getSigner();
+        await window.ethereum.request({ method: "eth_requestAccounts" });
+        
+        // In ethers v6, we use BrowserProvider instead of ethers.providers.Web3Provider
+        const _provider = new BrowserProvider(window.ethereum);
+        // The signer is derived via getSigner()
+        const _signer = await _provider.getSigner();
 
         // Instantiate the contracts
-        const ccContract = new ethers.Contract(
-          CARBON_CREDIT_ADDRESS, 
-          carbonCreditABI.abi, 
+        const ccContract = new Contract(
+          CARBON_CREDIT_ADDRESS,
+          carbonCreditABI.abi,
           _signer
         );
 
-        const mpContract = new ethers.Contract(
+        const mpContract = new Contract(
           MARKETPLACE_ADDRESS,
           marketplaceABI.abi,
           _signer
@@ -71,7 +79,7 @@ function App() {
         setCarbonCreditContract(ccContract);
         setMarketplaceContract(mpContract);
       } catch (err) {
-        console.error(err);
+        console.error("Error initializing contracts or wallet:", err);
       }
     };
 
@@ -82,13 +90,19 @@ function App() {
   // Mint (Batch)
   // ---------------------------------------------
   const handleMintBatch = async () => {
-    if (!carbonCreditContract) return;
+    if (!carbonCreditContract || !signer) return;
 
     try {
+      // Convert batchMintNumber to a BigInt
+      const numberOfCredits = batchMintNumber;
+
+      // We assume signer is the `to` address
+      const toAddress = await signer.getAddress();
+
       const tx = await carbonCreditContract.mintCarbonCreditsBatch(
-        await signer.getAddress(),        // to
-        ethers.BigNumber.from(batchMintNumber),  // numberOfCredits
-        batchMintUri                     // baseTokenURI
+        toAddress,
+        numberOfCredits,
+        batchMintUri
       );
       await tx.wait();
       alert(`Successfully minted ${batchMintNumber} credits!`);
@@ -105,8 +119,10 @@ function App() {
     if (!carbonCreditContract) return;
 
     try {
+      const tokenIdBN = redeemTokenId;
+
       const tx = await carbonCreditContract.redeemCarbonCredit(
-        ethers.BigNumber.from(redeemTokenId),
+        tokenIdBN,
         redeemEmissionId
       );
       await tx.wait();
@@ -119,17 +135,19 @@ function App() {
 
   // ---------------------------------------------
   // List for Sale
-  //   NOTE: The NFT must be already in the marketplace's possession
+  //   NOTE: The NFT must be in the marketplace's possession
   //         (safeTransferFrom your address -> marketplace contract)
   // ---------------------------------------------
   const handleListForSale = async () => {
     if (!marketplaceContract) return;
 
     try {
-      const tx = await marketplaceContract.listCreditForSale(
-        ethers.BigNumber.from(listTokenId),
-        ethers.utils.parseUnits(listPrice, 18)  // if your XRPL token uses 18 decimals
-      );
+      const tokenIdBN = listTokenId;
+
+      // parseUnits for XRPL token with 18 decimals (adjust if your token uses a different decimal)
+      const priceBN = parseUnits(listPrice, 18);
+
+      const tx = await marketplaceContract.listCreditForSale(tokenIdBN, priceBN);
       await tx.wait();
       alert(`Listed token #${listTokenId} for sale at ${listPrice} XRPL tokens.`);
     } catch (err) {
@@ -146,10 +164,10 @@ function App() {
     if (!marketplaceContract) return;
 
     try {
-      const tx = await marketplaceContract.buyCredit(
-        ethers.BigNumber.from(buyTokenId),
-        ethers.utils.parseUnits(buyOfferPrice, 18) 
-      );
+      const tokenIdBN = buyTokenId;
+      const offerBN = parseUnits(buyOfferPrice, 18);
+
+      const tx = await marketplaceContract.buyCredit(tokenIdBN, offerBN);
       await tx.wait();
       alert(`Bought token #${buyTokenId} for ${buyOfferPrice} XRPL tokens.`);
     } catch (err) {
@@ -165,7 +183,7 @@ function App() {
     if (!marketplaceContract) return;
 
     try {
-      // This is a view function (no gas cost)
+      // This is a view function
       const items = await marketplaceContract.getAllListingsSortedByPrice();
       // Each item is { tokenId, price }
       setListings(items);
@@ -188,20 +206,20 @@ function App() {
         <div className="card-body">
           <div className="mb-3">
             <label>Number of Credits to Mint</label>
-            <input 
-              type="number" 
-              className="form-control" 
-              value={batchMintNumber} 
-              onChange={(e) => setBatchMintNumber(e.target.value)} 
+            <input
+              type="number"
+              className="form-control"
+              value={batchMintNumber}
+              onChange={(e) => setBatchMintNumber(e.target.value)}
             />
           </div>
           <div className="mb-3">
             <label>Base URI</label>
-            <input 
-              type="text" 
-              className="form-control" 
-              value={batchMintUri} 
-              onChange={(e) => setBatchMintUri(e.target.value)} 
+            <input
+              type="text"
+              className="form-control"
+              value={batchMintUri}
+              onChange={(e) => setBatchMintUri(e.target.value)}
             />
           </div>
           <button className="btn btn-primary" onClick={handleMintBatch}>
@@ -216,20 +234,20 @@ function App() {
         <div className="card-body">
           <div className="mb-3">
             <label>Token ID</label>
-            <input 
-              type="number" 
-              className="form-control" 
-              value={redeemTokenId} 
-              onChange={(e) => setRedeemTokenId(e.target.value)} 
+            <input
+              type="number"
+              className="form-control"
+              value={redeemTokenId}
+              onChange={(e) => setRedeemTokenId(e.target.value)}
             />
           </div>
           <div className="mb-3">
             <label>Emission ID (string)</label>
-            <input 
-              type="text" 
-              className="form-control" 
-              value={redeemEmissionId} 
-              onChange={(e) => setRedeemEmissionId(e.target.value)} 
+            <input
+              type="text"
+              className="form-control"
+              value={redeemEmissionId}
+              onChange={(e) => setRedeemEmissionId(e.target.value)}
             />
           </div>
           <button className="btn btn-primary" onClick={handleRedeem}>
@@ -243,24 +261,24 @@ function App() {
         <div className="card-header">List Carbon Credit for Sale</div>
         <div className="card-body">
           <p className="text-muted">
-            (Remember that the Marketplace contract must currently own the NFT if you want to list it.)
+            (The Marketplace contract must currently own the NFT if you want to list it.)
           </p>
           <div className="mb-3">
             <label>Token ID</label>
-            <input 
-              type="number" 
-              className="form-control" 
+            <input
+              type="number"
+              className="form-control"
               value={listTokenId}
-              onChange={(e) => setListTokenId(e.target.value)} 
+              onChange={(e) => setListTokenId(e.target.value)}
             />
           </div>
           <div className="mb-3">
             <label>Price (in XRPL tokens)</label>
-            <input 
-              type="text" 
-              className="form-control" 
+            <input
+              type="text"
+              className="form-control"
               value={listPrice}
-              onChange={(e) => setListPrice(e.target.value)} 
+              onChange={(e) => setListPrice(e.target.value)}
             />
           </div>
           <button className="btn btn-primary" onClick={handleListForSale}>
@@ -275,20 +293,20 @@ function App() {
         <div className="card-body">
           <div className="mb-3">
             <label>Token ID</label>
-            <input 
-              type="number" 
-              className="form-control" 
+            <input
+              type="number"
+              className="form-control"
               value={buyTokenId}
-              onChange={(e) => setBuyTokenId(e.target.value)} 
+              onChange={(e) => setBuyTokenId(e.target.value)}
             />
           </div>
           <div className="mb-3">
             <label>Offer Price (in XRPL tokens)</label>
-            <input 
-              type="text" 
-              className="form-control" 
+            <input
+              type="text"
+              className="form-control"
               value={buyOfferPrice}
-              onChange={(e) => setBuyOfferPrice(e.target.value)} 
+              onChange={(e) => setBuyOfferPrice(e.target.value)}
             />
           </div>
           <button className="btn btn-success" onClick={handleBuyCredit}>
@@ -320,7 +338,7 @@ function App() {
                 {listings.map((item, idx) => (
                   <tr key={idx}>
                     <td>{item.tokenId.toString()}</td>
-                    <td>{ethers.utils.formatUnits(item.price, 18)}</td>
+                    <td>{formatUnits(item.price, 18)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -328,7 +346,6 @@ function App() {
           )}
         </div>
       </div>
-
     </div>
   );
 }
