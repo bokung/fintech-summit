@@ -1,3 +1,5 @@
+await marketplace.buyCredit(1, 18);
+await marketplace.buyCredit(1, ethers.utils.parseUnits("10", 18));
 console.log(await carbonCredit.ownerOf(1));
 console.log(carbonCredit.ownerOf(1));
 ;
