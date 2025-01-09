@@ -43,6 +43,9 @@ function App() {
   // For displaying listings
   const [listings, setListings] = useState([]);
 
+  const [ownerAddressQuery, setOwnerAddressQuery] = useState("");
+  const [ownerTokens, setOwnerTokens] = useState([]);
+
   // ---------------------------------------------
   // New State hooks for the extended UI
   // ---------------------------------------------
@@ -252,6 +255,33 @@ function App() {
     }
   };
 
+  const handleGetTokensOfAddress = async () => {
+    if (!carbonCreditContract || !ownerAddressQuery) {
+      alert("Please enter a valid address.");
+      return;
+    }
+    try {
+      const tokenIds = await carbonCreditContract.getTokenIdsOfOwner(ownerAddressQuery);
+      setOwnerTokens(tokenIds.map((id) => id.toString())); // Convert BN to string
+    } catch (err) {
+      console.error(err);
+      alert("Error retrieving tokens for that address.");
+    }
+  };
+  
+  const handleGetMarketplaceTokens = async () => {
+    if (!carbonCreditContract) return;
+    try {
+      // We'll reuse the existing MARKETPLACE_ADDRESS constant
+      const tokenIds = await carbonCreditContract.getTokenIdsOfOwner(MARKETPLACE_ADDRESS);
+      setOwnerTokens(tokenIds.map((id) => id.toString())); // Convert BN to string
+    } catch (err) {
+      console.error(err);
+      alert("Error retrieving tokens for the marketplace.");
+    }
+  };
+  
+
   // ---------------------------------------------
   // Render UI
   // ---------------------------------------------
@@ -325,6 +355,44 @@ function App() {
         </div>
       </div>
       {/* --- End Extended UI Section --- */}
+
+      {/* ---- Check Tokens of Owner Section ---- */}
+      <div className="card mb-4">
+        <div className="card-header">Check Tokens of an Address</div>
+        <div className="card-body">
+          <div className="mb-3">
+            <label>Address to Query</label>
+            <input
+              type="text"
+              className="form-control"
+              placeholder="0x123..."
+              value={ownerAddressQuery}
+              onChange={(e) => setOwnerAddressQuery(e.target.value)}
+            />
+          </div>
+          <div className="d-flex gap-2 mb-3">
+            <button className="btn btn-info" onClick={handleGetTokensOfAddress}>
+              Get Tokens of Address
+            </button>
+            <button className="btn btn-secondary" onClick={handleGetMarketplaceTokens}>
+              Get Marketplace Tokens
+            </button>
+          </div>
+          
+          {/* Display the tokens */}
+          <h5>Token IDs Found:</h5>
+          {ownerTokens.length === 0 ? (
+            <p>No tokens found.</p>
+          ) : (
+            <ul>
+              {ownerTokens.map((tid, idx) => (
+                <li key={idx}>{tid}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
 
       {/* Mint Batch Section */}
       <div className="card mb-4">
