@@ -1181,37 +1181,35 @@ function AdminTab({
         </div>
       </div>
 
-                <div style={fancyCardStyle}>
-                  <div style={fancyCardHeader}>
-                    <h3 style={bigHeadingStyle}>Check Owner of a Token</h3>
-                  </div>
-                  <div style={fancyCardBody}>
-                    <p className="text-muted">
-                      Unsure who owns that NFT? Check here:
-                    </p>
-                    <div className="mb-3">
-                      <label>Token ID:</label>
-                      <input
-                        type="number"
-                        className="form-control"
-                        value={queriedTokenId}
-                        onChange={(e) => setQueriedTokenId(e.target.value)}
-                      />
-                    </div>
-                    <button
-                      className="btn btn-info mb-2"
-                      onClick={handleCheckTokenOwner}
-                    >
-                      Check Owner
-                    </button>
-                    <div>
-                      <label style={{ fontWeight: "bold" }}>
-                        Owner of Token #{queriedTokenId}:
-                      </label>
-                      <div>{queriedTokenOwner || "Not fetched yet"}</div>
-                    </div>
-                  </div>
-                </div>
+      <div style={fancyCardStyle}>
+        <div style={fancyCardHeader}>
+          <h3 style={bigHeadingStyle}>Check Owner of a Token</h3>
+        </div>
+        <div style={fancyCardBody}>
+          <p className="text-muted">Enter a token ID below.</p>
+          <div className="mb-3">
+            <label>Token ID:</label>
+            <input
+              type="number"
+              className="form-control"
+              value={queriedTokenId}
+              onChange={(e) => setQueriedTokenId(e.target.value)}
+            />
+          </div>
+          <button
+            className="btn btn-info mb-2 animated-btn"
+            onClick={handleCheckTokenOwner}
+          >
+            Check Owner
+          </button>
+          <div>
+            <label style={{ fontWeight: "bold" }}>
+              Owner of Token #{queriedTokenId}:
+            </label>
+            <div>{queriedTokenOwner || "Not fetched yet"}</div>
+          </div>
+        </div>
+      </div>
 
       <div style={fancyCardStyle}>
         <div style={fancyCardHeader}>
