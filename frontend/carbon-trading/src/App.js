@@ -962,7 +962,7 @@ function UserTab({
     <div ref={nodeRef}>
       <div style={fancyCardStyle}>
         <div style={fancyCardHeader}>
-          <h3 style={bigHeadingStyle}>Check My ETH Balance</h3>
+          <h3 style={bigHeadingStyle}>Check My XRPL Balance</h3>
         </div>
         <div style={fancyCardBody}>
           <button
@@ -972,7 +972,7 @@ function UserTab({
             Check Balance
           </button>
           <div>
-            <label style={{ fontWeight: "bold" }}>Balance (ETH):</label>
+            <label style={{ fontWeight: "bold" }}>Balance (XRPL):</label>
             <span className="ms-2">
               {currentUserBalance || "Not fetched yet"}
             </span>
