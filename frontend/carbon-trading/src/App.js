@@ -29,7 +29,7 @@ function App() {
 
   // For the forms
   const [batchMintNumber, setBatchMintNumber] = useState("1");
-  const [batchMintUri, setBatchMintUri]       = useState("https://example.com/metadata/");
+  const [batchMintUri, setBatchMintUri]       = useState("");
   
   const [redeemTokenId, setRedeemTokenId]     = useState("");
   const [redeemEmissionId, setRedeemEmissionId] = useState("");
@@ -45,6 +45,13 @@ function App() {
 
   const [ownerAddressQuery, setOwnerAddressQuery] = useState("");
   const [ownerTokens, setOwnerTokens] = useState([]);
+
+  // For minting
+  const [mintToAddress, setMintToAddress] = useState("");
+  const defaultBaseUri = "https://example.com/metadata/";
+
+
+
 
   // ---------------------------------------------
   // New State hooks for the extended UI
@@ -105,25 +112,35 @@ function App() {
   // ---------------------------------------------
   const handleMintBatch = async () => {
     if (!carbonCreditContract || !signer) return;
-
+  
     try {
-      // Convert batchMintNumber to a BigInt (or keep as string if using ethers v6)
+      // Number of credits to mint
       const numberOfCredits = batchMintNumber;
-      // We assume signer is the `to` address
-      const toAddress = await signer.getAddress();
-
+  
+      // Use the user-provided 'to' address if given; otherwise, default to the connected wallet
+      const toAddress = mintToAddress && mintToAddress.trim() !== ""
+        ? mintToAddress
+        : await signer.getAddress();
+  
+      // Use the user-provided URI if given; otherwise, use the default
+      const uri = batchMintUri && batchMintUri.trim() !== ""
+        ? batchMintUri
+        : defaultBaseUri;
+  
       const tx = await carbonCreditContract.mintCarbonCreditsBatch(
         toAddress,
         numberOfCredits,
-        batchMintUri
+        uri
       );
       await tx.wait();
-      alert(`Successfully minted ${batchMintNumber} credits!`);
+  
+      alert(`Successfully minted ${batchMintNumber} credits to ${toAddress}! (URI: ${uri})`);
     } catch (err) {
       console.error(err);
       alert("Failed to mint batch!");
     }
   };
+
 
   const handleRedeem = async () => {
     if (!carbonCreditContract) return;
@@ -394,21 +411,35 @@ function App() {
       </div>
 
 
-      {/* Mint Batch Section */}
-      <div className="card mb-4">
-        <div className="card-header">Mint Carbon Credits (Batch)</div>
-        <div className="card-body">
+{/* Mint Batch Section */}
+<div className="card mb-4">
+  <div className="card-header">Mint Carbon Credits (Batch)</div>
+  <div className="card-body">
+    <div className="mb-3">
+      <label>Number of Credits to Mint</label>
+      <input
+        type="number"
+        className="form-control"
+        value={batchMintNumber}
+        onChange={(e) => setBatchMintNumber(e.target.value)}
+      />
+    </div>
+
+          {/* New: Address to Mint To (optional) */}
           <div className="mb-3">
-            <label>Number of Credits to Mint</label>
+            <label>Mint To Address (optional)</label>
             <input
-              type="number"
+              type="text"
               className="form-control"
-              value={batchMintNumber}
-              onChange={(e) => setBatchMintNumber(e.target.value)}
+              placeholder="0x1234... (defaults to your own address)"
+              value={mintToAddress}
+              onChange={(e) => setMintToAddress(e.target.value)}
             />
           </div>
+
+          {/* New: Base URI (optional) */}
           <div className="mb-3">
-            <label>Base URI</label>
+            <label>Base URI (optional; defaults to https://example.com/metadata/)</label>
             <input
               type="text"
               className="form-control"
@@ -416,11 +447,13 @@ function App() {
               onChange={(e) => setBatchMintUri(e.target.value)}
             />
           </div>
+
           <button className="btn btn-primary" onClick={handleMintBatch}>
             Mint Batch
           </button>
         </div>
       </div>
+
 
       {/* Redeem Section */}
       <div className="card mb-4">
