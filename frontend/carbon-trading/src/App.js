@@ -1,4 +1,3 @@
-// Filename: App.js
 import React, { useState, useEffect, useRef } from "react";
 import {
   BrowserProvider,
@@ -10,11 +9,7 @@ import {
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Modal, Button } from "react-bootstrap";
 import { CSSTransition, TransitionGroup } from "react-transition-group";
-
-// CSV parsing library
 import Papa from "papaparse";
-
-// Chart.js imports
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -26,18 +21,13 @@ import {
   Legend
 } from "chart.js";
 import { Line } from "react-chartjs-2";
-
-// Import ABIs
 import carbonCreditABI from "./contracts/CarbonCredit.json";
 import marketplaceABI from "./contracts/CarbonCreditMarketplace.json";
-
-// Import icons
 import homeIcon from "./icons/home.png";
 import marketplaceIcon from "./icons/marketplace.png";
 import userIcon from "./icons/user.png";
 import adminIcon from "./icons/admin.png";
 
-// Register Chart.js components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -48,11 +38,9 @@ ChartJS.register(
   Legend
 );
 
-// Contract addresses
 const CARBON_CREDIT_ADDRESS = "0x5fbdb2315678afecb367f032d93f642f64180aa3";
 const MARKETPLACE_ADDRESS = "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512";
 
-// Sample Price History
 const priceHistoryData = [
   { timestamp: 1704067200, price: "95" },
   { timestamp: 1704153600, price: "98" },
@@ -87,75 +75,45 @@ const priceHistoryData = [
 ];
 
 function App() {
-  // -----------------------------
-  // State
-  // -----------------------------
   const [signer, setSigner] = useState(null);
   const [provider, setProvider] = useState(null);
   const [carbonCreditContract, setCarbonCreditContract] = useState(null);
   const [marketplaceContract, setMarketplaceContract] = useState(null);
-
-  // For batch minting
   const [batchMintNumber, setBatchMintNumber] = useState("1");
   const [batchMintUri, setBatchMintUri] = useState("");
-
-  // For redeeming (single)
   const [redeemTokenId, setRedeemTokenId] = useState("");
   const [redeemEmissionId, setRedeemEmissionId] = useState("");
-
-  // For listing
   const [listTokenId, setListTokenId] = useState("");
   const [listPrice, setListPrice] = useState("");
-
-  // For buying
   const [buyTokenId, setBuyTokenId] = useState("");
   const [buyOfferPrice, setBuyOfferPrice] = useState("");
-
-  // For displaying listings
   const [listings, setListings] = useState([]);
-
-  // For querying tokens
   const [ownerAddressQuery, setOwnerAddressQuery] = useState("");
   const [ownerTokens, setOwnerTokens] = useState([]);
-
-  // For minting
   const [mintToAddress, setMintToAddress] = useState("");
   const defaultBaseUri = "https://example.com/metadata/";
-
-  // Extended UI
   const [currentUserAddress, setCurrentUserAddress] = useState("");
   const [currentUserBalance, setCurrentUserBalance] = useState("");
   const [contractOwnerAddress, setContractOwnerAddress] = useState("");
   const [queriedTokenId, setQueriedTokenId] = useState("");
   const [queriedTokenOwner, setQueriedTokenOwner] = useState("");
   const [marketplaceCreditCount, setMarketplaceCreditCount] = useState("");
-
-  // Sidebar / Tab
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState("home");
-
-  // Popups
   const [showModal, setShowModal] = useState(false);
   const [popupTitle, setPopupTitle] = useState("");
   const [popupMessage, setPopupMessage] = useState("");
-
-  // For transitions: nodeRefs to avoid findDOMNode usage
   const nodeRefs = {
     home: useRef(null),
     marketplace: useRef(null),
     user: useRef(null),
     admin: useRef(null)
   };
-
-  // Check if current user is contract owner
   const isUserOwner =
     currentUserAddress &&
     contractOwnerAddress &&
     currentUserAddress.toLowerCase() === contractOwnerAddress.toLowerCase();
 
-  // -----------------------------
-  // Connect wallet / init
-  // -----------------------------
   useEffect(() => {
     const init = async () => {
       if (!window.ethereum) {
@@ -166,7 +124,6 @@ function App() {
         await window.ethereum.request({ method: "eth_requestAccounts" });
         const _provider = new BrowserProvider(window.ethereum);
         const _signer = await _provider.getSigner();
-
         const ccContract = new Contract(
           CARBON_CREDIT_ADDRESS,
           carbonCreditABI.abi,
@@ -177,16 +134,12 @@ function App() {
           marketplaceABI.abi,
           _signer
         );
-
         setSigner(_signer);
         setProvider(_provider);
         setCarbonCreditContract(ccContract);
         setMarketplaceContract(mpContract);
-
-        // Gather addresses
         const addr = await _signer.getAddress();
         setCurrentUserAddress(addr);
-
         const owner = await ccContract.owner();
         setContractOwnerAddress(owner);
       } catch (err) {
@@ -196,18 +149,12 @@ function App() {
     init();
   }, []);
 
-  // -----------------------------
-  // Popup helper
-  // -----------------------------
   const handleShowPopup = (title, message) => {
     setPopupTitle(title);
     setPopupMessage(message);
     setShowModal(true);
   };
 
-  // -----------------------------
-  // Marketplace
-  // -----------------------------
   const handleListForSale = async () => {
     if (!marketplaceContract) return;
     try {
@@ -252,9 +199,6 @@ function App() {
     }
   };
 
-  // -----------------------------
-  // User
-  // -----------------------------
   const handleCheckUserBalance = async () => {
     if (!provider || !signer) return;
     try {
@@ -305,9 +249,6 @@ function App() {
     }
   };
 
-  // -----------------------------
-  // Admin
-  // -----------------------------
   const handleMintBatch = async () => {
     if (!carbonCreditContract || !signer) return;
     try {
@@ -381,16 +322,10 @@ function App() {
     }
   };
 
-  // -----------------------------
-  // Toggler for the side nav
-  // -----------------------------
   const toggleSidebar = () => {
     setIsSidebarCollapsed((prev) => !prev);
   };
 
-  // -----------------------------
-  // Render the tab content
-  // -----------------------------
   const renderTabContent = () => {
     switch (activeTab) {
       case "home":
@@ -468,7 +403,6 @@ function App() {
 
   return (
     <>
-      {/* Popup (Modal) */}
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>{popupTitle}</Modal.Title>
@@ -480,12 +414,6 @@ function App() {
           </Button>
         </Modal.Footer>
       </Modal>
-
-      {/* 
-        Some inline CSS for animations:
-          - Button hover scale
-          - Fade transitions for pages
-      */}
       <style>{`
         .animated-btn {
           transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
@@ -494,8 +422,6 @@ function App() {
           transform: scale(1.05);
           box-shadow: 0 0 10px rgba(0,0,0,0.15);
         }
-
-        /* Page Fade Animations using nodeRef approach */
         .fade-enter {
           opacity: 0.01;
         }
@@ -511,13 +437,7 @@ function App() {
           transition: opacity 300ms ease-in;
         }
       `}</style>
-
       <div style={{ display: "flex", minHeight: "100vh" }}>
-        {/* 
-          =================================
-          Side Navigation Panel
-          =================================
-        */}
         <div
           style={{
             width: isSidebarCollapsed ? "60px" : "250px",
@@ -542,9 +462,7 @@ function App() {
           >
             {isSidebarCollapsed ? ">" : "<"}
           </button>
-
           <div style={{ marginTop: "60px" }}>
-            {/* Home Tab */}
             <div
               className={`p-2 ${activeTab === "home" ? "bg-primary text-white" : ""}`}
               style={{ cursor: "pointer" }}
@@ -556,8 +474,6 @@ function App() {
                 "Home"
               )}
             </div>
-
-            {/* Marketplace Tab */}
             <div
               className={`p-2 ${
                 activeTab === "marketplace" ? "bg-primary text-white" : ""
@@ -575,8 +491,6 @@ function App() {
                 "Marketplace"
               )}
             </div>
-
-            {/* User Tab */}
             <div
               className={`p-2 ${activeTab === "user" ? "bg-primary text-white" : ""}`}
               style={{ cursor: "pointer" }}
@@ -588,8 +502,6 @@ function App() {
                 "User"
               )}
             </div>
-
-            {/* Admin Tab */}
             <div
               className={`p-2 ${activeTab === "admin" ? "bg-primary text-white" : ""}`}
               style={{ cursor: "pointer" }}
@@ -603,20 +515,10 @@ function App() {
             </div>
           </div>
         </div>
-
-        {/* 
-          =================================
-          Main Content
-          =================================
-        */}
         <div className="container py-4" style={{ flex: 1 }}>
           <h1 className="mb-4" style={{ textAlign: "center" }}>
             Carbon Credit Trading
           </h1>
-
-          {/* 
-            We use CSSTransition with nodeRef for each tab 
-          */}
           <TransitionGroup component={null}>
             <CSSTransition
               key={activeTab}
@@ -635,9 +537,6 @@ function App() {
   );
 }
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// HOME TAB COMPONENT
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 function HomeTab({ setActiveTab, nodeRef }) {
   return (
     <div ref={nodeRef}>
@@ -695,8 +594,6 @@ function HomeTab({ setActiveTab, nodeRef }) {
           />
         </div>
       </div>
-
-      {/* Steps / Buttons */}
       <div className="row">
         <div className="col-md-4 mb-4">
           <div
@@ -784,9 +681,6 @@ function HomeTab({ setActiveTab, nodeRef }) {
   );
 }
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// MARKETPLACE TAB COMPONENT
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 function MarketplaceTab({
   listings,
   listTokenId,
@@ -802,7 +696,6 @@ function MarketplaceTab({
   handleBuyCredit,
   nodeRef
 }) {
-  // Basic styling from parent
   const fancyCardStyle = {
     border: "2px solid #0dcaf0",
     borderRadius: "8px",
@@ -811,7 +704,6 @@ function MarketplaceTab({
     marginBottom: "25px",
     overflow: "hidden"
   };
-
   const fancyCardHeader = {
     backgroundColor: "#20c997",
     color: "#fff",
@@ -822,17 +714,14 @@ function MarketplaceTab({
     alignItems: "center",
     justifyContent: "space-between"
   };
-
   const fancyCardBody = {
     padding: "20px"
   };
-
   const bigHeadingStyle = {
     color: "#034f84",
     fontWeight: "900",
     margin: 0
   };
-
   return (
     <div ref={nodeRef}>
       <div style={fancyCardStyle}>
@@ -868,7 +757,6 @@ function MarketplaceTab({
           )}
         </div>
       </div>
-
       <div style={fancyCardStyle}>
         <div style={fancyCardHeader}>
           <h3 style={bigHeadingStyle}>List a Credit For Sale</h3>
@@ -903,7 +791,6 @@ function MarketplaceTab({
           </button>
         </div>
       </div>
-
       <div style={fancyCardStyle}>
         <div style={fancyCardHeader}>
           <h3 style={bigHeadingStyle}>Buy a Credit</h3>
@@ -938,15 +825,11 @@ function MarketplaceTab({
           </button>
         </div>
       </div>
-
       <PriceHistoryChart />
     </div>
   );
 }
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// USER TAB COMPONENT
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 function UserTab({
   currentUserBalance,
   handleCheckUserBalance,
@@ -958,7 +841,6 @@ function UserTab({
   currentUserAddress,
   nodeRef
 }) {
-  // We'll reuse the same card styling approach as above for brevity
   const fancyCardStyle = {
     border: "2px solid #0dcaf0",
     borderRadius: "8px",
@@ -967,7 +849,6 @@ function UserTab({
     marginBottom: "25px",
     overflow: "hidden"
   };
-
   const fancyCardHeader = {
     backgroundColor: "#20c997",
     color: "#fff",
@@ -978,17 +859,14 @@ function UserTab({
     alignItems: "center",
     justifyContent: "space-between"
   };
-
   const fancyCardBody = {
     padding: "20px"
   };
-
   const bigHeadingStyle = {
     color: "#034f84",
     fontWeight: "900",
     margin: 0
   };
-
   return (
     <div ref={nodeRef}>
       <div style={fancyCardStyle}>
@@ -1010,7 +888,6 @@ function UserTab({
           </div>
         </div>
       </div>
-
       <div style={fancyCardStyle}>
         <div style={fancyCardHeader}>
           <h3 style={bigHeadingStyle}>Check Tokens of an Address</h3>
@@ -1040,7 +917,6 @@ function UserTab({
               Marketplace Tokens
             </button>
           </div>
-
           <h5 style={{ color: "#0d6efd" }}>Token IDs Found:</h5>
           {ownerTokens.length === 0 ? (
             <p>No tokens found.</p>
@@ -1053,7 +929,6 @@ function UserTab({
           )}
         </div>
       </div>
-
       <div style={fancyCardStyle}>
         <div style={fancyCardHeader}>
           <h3 style={bigHeadingStyle}>My Account</h3>
@@ -1071,9 +946,6 @@ function UserTab({
   );
 }
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// ADMIN TAB COMPONENT
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 function AdminTab({
   isUserOwner,
   batchMintNumber,
@@ -1096,8 +968,6 @@ function AdminTab({
   marketplaceCreditCount,
   contractOwnerAddress,
   nodeRef,
-
-  // Newly added for CSV redemption
   carbonCreditContract,
   currentUserAddress,
   handleShowPopup
@@ -1110,7 +980,6 @@ function AdminTab({
     marginBottom: "25px",
     overflow: "hidden"
   };
-
   const fancyCardHeader = {
     backgroundColor: "#20c997",
     color: "#fff",
@@ -1121,32 +990,25 @@ function AdminTab({
     alignItems: "center",
     justifyContent: "space-between"
   };
-
   const fancyCardBody = {
     padding: "20px"
   };
-
   const bigHeadingStyle = {
     color: "#034f84",
     fontWeight: "900",
     margin: 0
   };
-
-  // ~~~~~~~~~~~~~~~
-  // CSV Redemption States
-  // ~~~~~~~~~~~~~~~
   const [emissionRecords, setEmissionRecords] = useState([]);
   const [selectedTokenByEmission, setSelectedTokenByEmission] = useState({});
   const [userTokenIds, setUserTokenIds] = useState([]);
 
-  // 1. Handle CSV file upload
   const handleFileChange = (e) => {
     if (e.target.files[0]) {
       Papa.parse(e.target.files[0], {
         header: true,
         skipEmptyLines: true,
         complete: (results) => {
-          setEmissionRecords(results.data); // array of objects
+          setEmissionRecords(results.data);
         },
         error: (err) => {
           console.error("Error parsing CSV:", err);
@@ -1156,7 +1018,6 @@ function AdminTab({
     }
   };
 
-  // 2. For each emission row, user selects which token to use
   const handleSelectToken = (emissionId, tokenId) => {
     setSelectedTokenByEmission((prev) => ({
       ...prev,
@@ -1164,7 +1025,6 @@ function AdminTab({
     }));
   };
 
-  // 3. Redeem for one emission
   const handleRedeemForEmission = async (emissionId) => {
     try {
       const chosenToken = selectedTokenByEmission[emissionId];
@@ -1172,11 +1032,8 @@ function AdminTab({
         handleShowPopup("Error!", "Please select a carbon credit token.");
         return;
       }
-
-      // Call contract function
       const tx = await carbonCreditContract.redeemCarbonCredit(chosenToken, emissionId);
       await tx.wait();
-
       handleShowPopup(
         "Redeemed",
         `Token #${chosenToken} was redeemed for emission: ${emissionId}`
@@ -1190,15 +1047,13 @@ function AdminTab({
     }
   };
 
-  // 4. Redeem all from CSV
   const handleRedeemAll = async () => {
     for (const record of emissionRecords) {
-      const emissionId = record.emissionId; // or however your CSV column is named
+      const emissionId = record.emissionId;
       await handleRedeemForEmission(emissionId);
     }
   };
 
-  // 5. Fetch user's tokens (if you want to load them automatically or via button)
   const fetchUserTokens = async (address) => {
     if (!carbonCreditContract || !address) return;
     try {
@@ -1210,7 +1065,6 @@ function AdminTab({
     }
   };
 
-  // If user is not owner, block access (same as existing code)
   if (!isUserOwner) {
     return (
       <div ref={nodeRef} className="alert alert-danger">
@@ -1221,7 +1075,6 @@ function AdminTab({
 
   return (
     <div ref={nodeRef}>
-      {/* MINTING SECTION */}
       <div style={fancyCardStyle}>
         <div style={fancyCardHeader}>
           <h3 style={bigHeadingStyle}>Mint Carbon Credits (Batch)</h3>
@@ -1239,7 +1092,6 @@ function AdminTab({
               onChange={(e) => setBatchMintNumber(e.target.value)}
             />
           </div>
-
           <div className="mb-3">
             <label>Mint To Address (optional):</label>
             <input
@@ -1250,7 +1102,6 @@ function AdminTab({
               onChange={(e) => setMintToAddress(e.target.value)}
             />
           </div>
-
           <div className="mb-3">
             <label>Base URI (optional):</label>
             <input
@@ -1260,14 +1111,11 @@ function AdminTab({
               onChange={(e) => setBatchMintUri(e.target.value)}
             />
           </div>
-
           <button className="btn btn-primary animated-btn" onClick={handleMintBatch}>
             Mint Batch
           </button>
         </div>
       </div>
-
-      {/* REDEEM SINGLE SECTION */}
       <div style={fancyCardStyle}>
         <div style={fancyCardHeader}>
           <h3 style={bigHeadingStyle}>Redeem a Carbon Credit</h3>
@@ -1297,8 +1145,6 @@ function AdminTab({
           </button>
         </div>
       </div>
-
-      {/* CHECK TOKEN OWNER SECTION */}
       <div style={fancyCardStyle}>
         <div style={fancyCardHeader}>
           <h3 style={bigHeadingStyle}>Check Owner of a Token</h3>
@@ -1328,8 +1174,6 @@ function AdminTab({
           </div>
         </div>
       </div>
-
-      {/* MARKETPLACE BALANCE SECTION */}
       <div style={fancyCardStyle}>
         <div style={fancyCardHeader}>
           <h3 style={bigHeadingStyle}>Get Marketplace Balance</h3>
@@ -1350,8 +1194,6 @@ function AdminTab({
           </div>
         </div>
       </div>
-
-      {/* CONTRACT OWNER SECTION */}
       <div style={fancyCardStyle}>
         <div style={fancyCardHeader}>
           <h3 style={bigHeadingStyle}>Contract Owner</h3>
@@ -1361,10 +1203,6 @@ function AdminTab({
           <strong>{contractOwnerAddress}</strong>
         </div>
       </div>
-
-      {/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-          NEW SECTION: CSV-BASED REDEMPTION
-          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */}
       <div style={fancyCardStyle}>
         <div style={fancyCardHeader}>
           <h3 style={bigHeadingStyle}>Redeem Emissions from CSV</h3>
@@ -1379,7 +1217,6 @@ function AdminTab({
               onChange={handleFileChange}
             />
           </div>
-
           <div className="mb-3">
             <button
               className="btn btn-secondary animated-btn"
@@ -1388,21 +1225,20 @@ function AdminTab({
               Load My Carbon Credits
             </button>
           </div>
-
           {emissionRecords.length > 0 && (
             <table className="table table-bordered">
               <thead>
                 <tr>
                   <th>Emission ID</th>
-                  <th>Quantity (Tons)</th> {/* example column */}
+                  <th>Quantity (Tons)</th>
                   <th>Select Carbon Credit (Token ID)</th>
                   <th>Redeem Action</th>
                 </tr>
               </thead>
               <tbody>
                 {emissionRecords.map((record, idx) => {
-                  const emissionId = record.emissionId; // match CSV header
-                  const quantity = record.quantity; // match CSV header
+                  const emissionId = record.emissionId;
+                  const quantity = record.quantity;
                   return (
                     <tr key={idx}>
                       <td>{emissionId}</td>
@@ -1437,7 +1273,6 @@ function AdminTab({
               </tbody>
             </table>
           )}
-
           {emissionRecords.length > 0 && (
             <button className="btn btn-success mt-2 animated-btn" onClick={handleRedeemAll}>
               Redeem All Emissions
@@ -1449,15 +1284,11 @@ function AdminTab({
   );
 }
 
-/**
- * PriceHistoryChart - uses Chart.js + react-chartjs-2
- */
 function PriceHistoryChart() {
   const labels = priceHistoryData.map((point) =>
     new Date(point.timestamp * 1000).toLocaleDateString()
   );
   const prices = priceHistoryData.map((point) => Number(point.price));
-
   const data = {
     labels,
     datasets: [
@@ -1470,7 +1301,6 @@ function PriceHistoryChart() {
       }
     ]
   };
-
   const options = {
     responsive: true,
     plugins: {
@@ -1494,7 +1324,6 @@ function PriceHistoryChart() {
       }
     }
   };
-
   const fancyCardStyle = {
     border: "2px solid #0dcaf0",
     backgroundColor: "#f0fcff",
@@ -1502,7 +1331,6 @@ function PriceHistoryChart() {
     borderRadius: "8px",
     boxShadow: "0 0 10px rgba(0,0,0,0.1)"
   };
-
   const fancyCardHeader = {
     backgroundColor: "#20c997",
     color: "#fff",
@@ -1512,13 +1340,11 @@ function PriceHistoryChart() {
     alignItems: "center",
     justifyContent: "space-between"
   };
-
   const bigHeadingStyle = {
     color: "#034f84",
     fontWeight: "900",
     margin: 0
   };
-
   return (
     <div style={fancyCardStyle}>
       <div style={fancyCardHeader}>
