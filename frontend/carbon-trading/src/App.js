@@ -256,7 +256,9 @@ function App() {
       return;
     }
     try {
-      const tokenIds = await carbonCreditContract.getTokenIdsOfOwner(ownerAddressQuery);
+      const tokenIds = await carbonCreditContract.getTokenIdsOfOwner(
+        ownerAddressQuery
+      );
       setOwnerTokens(tokenIds.map((id) => id.toString()));
     } catch (err) {
       console.error(err);
@@ -267,7 +269,9 @@ function App() {
   const handleGetMarketplaceTokens = async () => {
     if (!carbonCreditContract) return;
     try {
-      const tokenIds = await carbonCreditContract.getTokenIdsOfOwner(MARKETPLACE_ADDRESS);
+      const tokenIds = await carbonCreditContract.getTokenIdsOfOwner(
+        MARKETPLACE_ADDRESS
+      );
       setOwnerTokens(tokenIds.map((id) => id.toString()));
     } catch (err) {
       console.error(err);
@@ -401,14 +405,20 @@ function App() {
             onClick={() => setActiveTab("home")}
           >
             {isSidebarCollapsed ? (
-              <img src={homeIcon} alt="Home" style={{ width: "24px", height: "24px" }} />
+              <img
+                src={homeIcon}
+                alt="Home"
+                style={{ width: "24px", height: "24px" }}
+              />
             ) : (
               "Home"
             )}
           </div>
 
           <div
-            className={`p-2 ${activeTab === "marketplace" ? "bg-primary text-white" : ""}`}
+            className={`p-2 ${
+              activeTab === "marketplace" ? "bg-primary text-white" : ""
+            }`}
             style={{ cursor: "pointer" }}
             onClick={() => setActiveTab("marketplace")}
           >
@@ -428,7 +438,11 @@ function App() {
             onClick={() => setActiveTab("user")}
           >
             {isSidebarCollapsed ? (
-              <img src={userIcon} alt="User" style={{ width: "24px", height: "24px" }} />
+              <img
+                src={userIcon}
+                alt="User"
+                style={{ width: "24px", height: "24px" }}
+              />
             ) : (
               "User"
             )}
@@ -440,7 +454,11 @@ function App() {
             onClick={() => setActiveTab("admin")}
           >
             {isSidebarCollapsed ? (
-              <img src={adminIcon} alt="Admin" style={{ width: "24px", height: "24px" }} />
+              <img
+                src={adminIcon}
+                alt="Admin"
+                style={{ width: "24px", height: "24px" }}
+              />
             ) : (
               "Admin"
             )}
@@ -454,16 +472,84 @@ function App() {
         ====================================
       */}
       <div className="container py-4" style={{ flex: 1 }}>
-        <h1 className="mb-4" style={{ textAlign: 'center' }}>Carbon Credit Trading</h1>
+        <h1 className="mb-4" style={{ textAlign: "center" }}>
+          Carbon Credit Trading
+        </h1>
 
         {/* HOME TAB CONTENT */}
         {activeTab === "home" && (
-          <div className="card mb-4">
-            <div className="card-body">
-              <h2>Welcome to the Carbon Credit Trading App</h2>
-              <p>This is the home page.</p>
+          <>
+            {/* Hero Banner Section */}
+            <div className="card mb-4">
+              <div
+                className="card-body"
+                style={{
+                  background:
+                    "url('https://images.unsplash.com/photo-1548767797-a1f5d87fdcf1') center/cover",
+                  minHeight: "250px",
+                  color: "#fff",
+                  borderRadius: "5px"
+                }}
+              >
+                <h2 style={{ fontWeight: "bold" }}>Protect the Planet</h2>
+                <p>
+                  Invest in carbon credits to offset emissions and support
+                  greener initiatives worldwide.
+                </p>
+                <button className="btn btn-light">Get Started</button>
+              </div>
             </div>
-          </div>
+
+            {/* Additional Steps / Info */}
+            <div className="row">
+              <div className="col-md-4 mb-4">
+                <div className="card h-100">
+                  <div className="card-body">
+                    <h5 className="card-title">Step 1</h5>
+                    <p className="card-text">
+                      Create an account or connect your wallet to begin trading
+                      carbon credits.
+                    </p>
+                    <button className="btn btn-primary">Sign Up</button>
+                  </div>
+                </div>
+              </div>
+              <div className="col-md-4 mb-4">
+                <div className="card h-100">
+                  <div className="card-body">
+                    <h5 className="card-title">Step 2</h5>
+                    <p className="card-text">
+                      Browse our marketplace to find carbon credits that match
+                      your sustainability goals.
+                    </p>
+                    <button
+                      className="btn btn-success"
+                      onClick={() => setActiveTab("marketplace")}
+                    >
+                      Explore Marketplace
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="col-md-4 mb-4">
+                <div className="card h-100">
+                  <div className="card-body">
+                    <h5 className="card-title">Step 3</h5>
+                    <p className="card-text">
+                      Track your credits and redeem them to offset real-world
+                      emissions for a cleaner future.
+                    </p>
+                    <button
+                      className="btn btn-warning"
+                      onClick={() => setActiveTab("admin")}
+                    >
+                      Redeem Credits
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
         )}
 
         {/* MARKETPLACE TAB CONTENT */}
@@ -473,7 +559,8 @@ function App() {
               <div className="card-header">List Carbon Credit for Sale</div>
               <div className="card-body">
                 <p className="text-muted">
-                  (Marketplace contract must currently own the NFT if you want to list it.)
+                  (Marketplace contract must currently own the NFT if you want
+                  to list it.)
                 </p>
                 <div className="mb-3">
                   <label>Token ID</label>
@@ -571,7 +658,10 @@ function App() {
             <div className="card mb-4">
               <div className="card-header">Check My ETH Balance</div>
               <div className="card-body">
-                <button className="btn btn-info mb-2" onClick={handleCheckUserBalance}>
+                <button
+                  className="btn btn-info mb-2"
+                  onClick={handleCheckUserBalance}
+                >
                   Check My ETH Balance
                 </button>
                 <div>
@@ -597,10 +687,16 @@ function App() {
                   />
                 </div>
                 <div className="d-flex gap-2 mb-3">
-                  <button className="btn btn-info" onClick={handleGetTokensOfAddress}>
+                  <button
+                    className="btn btn-info"
+                    onClick={handleGetTokensOfAddress}
+                  >
                     Get Tokens of Address
                   </button>
-                  <button className="btn btn-secondary" onClick={handleGetMarketplaceTokens}>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={handleGetMarketplaceTokens}
+                  >
                     Get Marketplace Tokens
                   </button>
                 </div>
@@ -634,8 +730,8 @@ function App() {
         )}
 
         {/* ADMIN TAB CONTENT */}
-        {activeTab === "admin" && (
-          isUserOwner ? (
+        {activeTab === "admin" &&
+          (isUserOwner ? (
             <>
               <div className="card mb-4">
                 <div className="card-header">Mint Carbon Credits (Batch)</div>
@@ -716,7 +812,10 @@ function App() {
                       onChange={(e) => setQueriedTokenId(e.target.value)}
                     />
                   </div>
-                  <button className="btn btn-info mb-2" onClick={handleCheckTokenOwner}>
+                  <button
+                    className="btn btn-info mb-2"
+                    onClick={handleCheckTokenOwner}
+                  >
                     Check Owner
                   </button>
                   <div>
@@ -729,7 +828,10 @@ function App() {
               <div className="card mb-4">
                 <div className="card-header">Get Marketplace Balance</div>
                 <div className="card-body">
-                  <button className="btn btn-info mb-2" onClick={handleMarketplaceBalance}>
+                  <button
+                    className="btn btn-info mb-2"
+                    onClick={handleMarketplaceBalance}
+                  >
                     Retrieve Marketplace Balance
                   </button>
                   <div>
@@ -753,8 +855,7 @@ function App() {
             <div className="alert alert-danger">
               You do not have permission to view this section.
             </div>
-          )
-        )}
+          ))}
       </div>
     </div>
   );
