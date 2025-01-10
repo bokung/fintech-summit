@@ -9,13 +9,75 @@ import {
 } from "ethers";
 import "bootstrap/dist/css/bootstrap.min.css";
 
+// Chart.js imports
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+} from "chart.js";
+import { Line } from "react-chartjs-2";
+
 // --- Import the ABI JSON for each contract
+//    (Replace these paths with the correct paths to your own ABI files.)
 import carbonCreditABI from "./contracts/CarbonCredit.json";
 import marketplaceABI from "./contracts/CarbonCreditMarketplace.json";
 
-// You should update these to match what was printed by your Hardhat (or similar) deploy script!
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
+// You should update these to match the addresses of your deployed contracts:
 const CARBON_CREDIT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 const MARKETPLACE_ADDRESS   = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
+
+// ---------------------------------------------
+// SAMPLE PRICE HISTORY DATA (30+ entries)
+// (Embedded directly here, so there's no external fetch.)
+// ---------------------------------------------
+const priceHistoryData = [
+  { "timestamp": 1704067200, "price": "95" },
+  { "timestamp": 1704153600, "price": "98" },
+  { "timestamp": 1704240000, "price": "102" },
+  { "timestamp": 1704326400, "price": "110" },
+  { "timestamp": 1704412800, "price": "108" },
+  { "timestamp": 1704499200, "price": "112" },
+  { "timestamp": 1704585600, "price": "115" },
+  { "timestamp": 1704672000, "price": "120" },
+  { "timestamp": 1704758400, "price": "118" },
+  { "timestamp": 1704844800, "price": "121" },
+  { "timestamp": 1704931200, "price": "123" },
+  { "timestamp": 1705017600, "price": "125" },
+  { "timestamp": 1705104000, "price": "128" },
+  { "timestamp": 1705190400, "price": "130" },
+  { "timestamp": 1705276800, "price": "127" },
+  { "timestamp": 1705363200, "price": "129" },
+  { "timestamp": 1705449600, "price": "135" },
+  { "timestamp": 1705536000, "price": "140" },
+  { "timestamp": 1705622400, "price": "137" },
+  { "timestamp": 1705708800, "price": "142" },
+  { "timestamp": 1705795200, "price": "145" },
+  { "timestamp": 1705881600, "price": "148" },
+  { "timestamp": 1705968000, "price": "152" },
+  { "timestamp": 1706054400, "price": "150" },
+  { "timestamp": 1706140800, "price": "155" },
+  { "timestamp": 1706227200, "price": "158" },
+  { "timestamp": 1706313600, "price": "160" },
+  { "timestamp": 1706400000, "price": "165" },
+  { "timestamp": 1706486400, "price": "168" },
+  { "timestamp": 1706572800, "price": "172" }
+];
 
 function App() {
   // ---------------------------------------------
@@ -27,22 +89,26 @@ function App() {
   const [carbonCreditContract, setCarbonCreditContract] = useState(null);
   const [marketplaceContract, setMarketplaceContract] = useState(null);
 
-  // For the forms
+  // For batch minting
   const [batchMintNumber, setBatchMintNumber] = useState("1");
   const [batchMintUri, setBatchMintUri]       = useState("");
-  
-  const [redeemTokenId, setRedeemTokenId]     = useState("");
-  const [redeemEmissionId, setRedeemEmissionId] = useState("");
 
-  const [listTokenId, setListTokenId]         = useState("");
-  const [listPrice, setListPrice]             = useState("");
+  // For redeeming
+  const [redeemTokenId, setRedeemTokenId]         = useState("");
+  const [redeemEmissionId, setRedeemEmissionId]   = useState("");
 
-  const [buyTokenId, setBuyTokenId]           = useState("");
-  const [buyOfferPrice, setBuyOfferPrice]     = useState("");
+  // For listing
+  const [listTokenId, setListTokenId]             = useState("");
+  const [listPrice, setListPrice]                 = useState("");
+
+  // For buying
+  const [buyTokenId, setBuyTokenId]               = useState("");
+  const [buyOfferPrice, setBuyOfferPrice]         = useState("");
 
   // For displaying listings
   const [listings, setListings] = useState([]);
 
+  // For querying tokens of an address
   const [ownerAddressQuery, setOwnerAddressQuery] = useState("");
   const [ownerTokens, setOwnerTokens] = useState([]);
 
@@ -50,12 +116,7 @@ function App() {
   const [mintToAddress, setMintToAddress] = useState("");
   const defaultBaseUri = "https://example.com/metadata/";
 
-
-
-
-  // ---------------------------------------------
-  // New State hooks for the extended UI
-  // ---------------------------------------------
+  // Extended UI
   const [currentUserAddress, setCurrentUserAddress] = useState("");
   const [currentUserBalance, setCurrentUserBalance] = useState("");
   const [contractOwnerAddress, setContractOwnerAddress] = useState("");
@@ -76,10 +137,9 @@ function App() {
       try {
         // Request user to connect their wallet
         await window.ethereum.request({ method: "eth_requestAccounts" });
-        
+
         // In ethers v6, we use BrowserProvider instead of ethers.providers.Web3Provider
         const _provider = new BrowserProvider(window.ethereum);
-        // The signer is derived via getSigner()
         const _signer = await _provider.getSigner();
 
         // Instantiate the contracts
@@ -108,32 +168,32 @@ function App() {
   }, []);
 
   // ---------------------------------------------
-  // Handlers for the original functionality
+  // Handlers (Original)
   // ---------------------------------------------
   const handleMintBatch = async () => {
     if (!carbonCreditContract || !signer) return;
-  
+
     try {
       // Number of credits to mint
       const numberOfCredits = batchMintNumber;
-  
+
       // Use the user-provided 'to' address if given; otherwise, default to the connected wallet
       const toAddress = mintToAddress && mintToAddress.trim() !== ""
         ? mintToAddress
         : await signer.getAddress();
-  
+
       // Use the user-provided URI if given; otherwise, use the default
       const uri = batchMintUri && batchMintUri.trim() !== ""
         ? batchMintUri
         : defaultBaseUri;
-  
+
       const tx = await carbonCreditContract.mintCarbonCreditsBatch(
         toAddress,
         numberOfCredits,
         uri
       );
       await tx.wait();
-  
+
       alert(`Successfully minted ${batchMintNumber} credits to ${toAddress}! (URI: ${uri})`);
     } catch (err) {
       console.error(err);
@@ -141,13 +201,11 @@ function App() {
     }
   };
 
-
   const handleRedeem = async () => {
     if (!carbonCreditContract) return;
 
     try {
       const tokenIdBN = redeemTokenId;
-
       const tx = await carbonCreditContract.redeemCarbonCredit(
         tokenIdBN,
         redeemEmissionId
@@ -206,9 +264,8 @@ function App() {
   };
 
   // ---------------------------------------------
-  // Handlers for the extended functionality
+  // Handlers (Extended UI)
   // ---------------------------------------------
-  // 1. Get the address of the current user (button)
   const handleCheckUserAddress = async () => {
     if (!signer) return;
     try {
@@ -220,7 +277,6 @@ function App() {
     }
   };
 
-  // 2. Get the current balance of the signed-in user in ETH
   const handleCheckUserBalance = async () => {
     if (!provider || !signer) return;
     try {
@@ -234,8 +290,6 @@ function App() {
     }
   };
 
-  // 3 & 4. Show the address of the owner of the carbon credit contract
-  //    We'll fetch it on-demand with a button, or you can also do so on init.
   const handleFetchContractOwner = async () => {
     if (!carbonCreditContract) return;
     try {
@@ -247,7 +301,6 @@ function App() {
     }
   };
 
-  // 5. A box that prompts for a token ID and returns the owner of that coin
   const handleCheckTokenOwner = async () => {
     if (!carbonCreditContract || !queriedTokenId) return;
     try {
@@ -259,8 +312,6 @@ function App() {
     }
   };
 
-  // 6. The total number of carbon credits currently in the marketplace
-  //    (the # of tokens the marketplace contract itself owns)
   const handleMarketplaceBalance = async () => {
     if (!marketplaceContract) return;
     try {
@@ -285,7 +336,7 @@ function App() {
       alert("Error retrieving tokens for that address.");
     }
   };
-  
+
   const handleGetMarketplaceTokens = async () => {
     if (!carbonCreditContract) return;
     try {
@@ -297,7 +348,6 @@ function App() {
       alert("Error retrieving tokens for the marketplace.");
     }
   };
-  
 
   // ---------------------------------------------
   // Render UI
@@ -306,7 +356,7 @@ function App() {
     <div className="container py-5">
       <h1 className="text-center mb-5">Carbon Credit Trading</h1>
 
-      {/* --- New Extended UI Section --- */}
+      {/* --- Extended UI Section --- */}
       <div className="card mb-4">
         <div className="card-header">Extended UI Features</div>
         <div className="card-body">
@@ -316,7 +366,9 @@ function App() {
           </button>
           <div className="mb-3">
             <label>Current User Address:</label>
-            <div className="form-control" readOnly>{currentUserAddress || "Not fetched yet"}</div>
+            <div className="form-control" readOnly>
+              {currentUserAddress || "Not fetched yet"}
+            </div>
           </div>
 
           {/* 2. UI element to display the current user balance in ETH */}
@@ -325,7 +377,9 @@ function App() {
           </button>
           <div className="mb-3">
             <label>My Balance (ETH):</label>
-            <div className="form-control" readOnly>{currentUserBalance || "Not fetched yet"}</div>
+            <div className="form-control" readOnly>
+              {currentUserBalance || "Not fetched yet"}
+            </div>
           </div>
 
           {/* 3 & 4. Address of the owner of the carbon credit contract */}
@@ -395,7 +449,7 @@ function App() {
               Get Marketplace Tokens
             </button>
           </div>
-          
+
           {/* Display the tokens */}
           <h5>Token IDs Found:</h5>
           {ownerTokens.length === 0 ? (
@@ -410,20 +464,19 @@ function App() {
         </div>
       </div>
 
-
-{/* Mint Batch Section */}
-<div className="card mb-4">
-  <div className="card-header">Mint Carbon Credits (Batch)</div>
-  <div className="card-body">
-    <div className="mb-3">
-      <label>Number of Credits to Mint</label>
-      <input
-        type="number"
-        className="form-control"
-        value={batchMintNumber}
-        onChange={(e) => setBatchMintNumber(e.target.value)}
-      />
-    </div>
+      {/* Mint Batch Section */}
+      <div className="card mb-4">
+        <div className="card-header">Mint Carbon Credits (Batch)</div>
+        <div className="card-body">
+          <div className="mb-3">
+            <label>Number of Credits to Mint</label>
+            <input
+              type="number"
+              className="form-control"
+              value={batchMintNumber}
+              onChange={(e) => setBatchMintNumber(e.target.value)}
+            />
+          </div>
 
           {/* New: Address to Mint To (optional) */}
           <div className="mb-3">
@@ -453,7 +506,6 @@ function App() {
           </button>
         </div>
       </div>
-
 
       {/* Redeem Section */}
       <div className="card mb-4">
@@ -572,6 +624,76 @@ function App() {
             </table>
           )}
         </div>
+      </div>
+
+      {/* 
+        ============================
+        Price History (Line Chart)
+        ============================
+      */}
+      <PriceHistoryChart />
+
+    </div>
+  );
+}
+
+/**
+ * Separate component to render the line chart using Chart.js + react-chartjs-2.
+ * We use the embedded `priceHistoryData` array from above. 
+ * All data points share the same "series," meaning there's only one line on the graph.
+ */
+function PriceHistoryChart() {
+  // Convert your JSON data (timestamp/price) to arrays for Chart.js
+  const labels = priceHistoryData.map((point) =>
+    // Convert Unix timestamp to a readable date
+    new Date(point.timestamp * 1000).toLocaleDateString()
+  );
+
+  const prices = priceHistoryData.map((point) => Number(point.price));
+
+  // Prepare data and options for Chart.js
+  const data = {
+    labels,
+    datasets: [
+      {
+        label: "Carbon Credit Price (XRPL)",
+        data: prices,
+        fill: false,
+        borderColor: "rgba(75,192,192,1)",
+        tension: 0.1
+      }
+    ]
+  };
+
+  const options = {
+    responsive: true,
+    plugins: {
+      title: {
+        display: true,
+        text: "Price History of Carbon Credits"
+      }
+    },
+    scales: {
+      y: {
+        title: {
+          display: true,
+          text: "Price (XRPL)"
+        }
+      },
+      x: {
+        title: {
+          display: true,
+          text: "Date"
+        }
+      }
+    }
+  };
+
+  return (
+    <div className="card mb-4">
+      <div className="card-header">Price History (Line Chart)</div>
+      <div className="card-body">
+        <Line data={data} options={options} />
       </div>
     </div>
   );
