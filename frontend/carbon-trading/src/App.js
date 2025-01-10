@@ -579,9 +579,19 @@ function App() {
           =================================
         */}
         <div className="container py-4" style={{ flex: 1 }}>
-          <h1 className="mb-4" style={{ textAlign: "center" }}>
-            Carbon Credit Trading
+          <h1
+            className="mb-4"
+            style={{
+              textAlign: "center",  // Centers the text
+              fontSize: "2.5rem",
+              fontWeight: "bold",
+              textShadow: "2px 2px 4px rgba(0,0,0,0.3)",
+              marginBottom: "20px"
+            }}
+          >
+            Beta 1.0.0: Carbon Trading Platform
           </h1>
+
 
           {/* 
             We use CSSTransition with nodeRef for each tab 
@@ -645,9 +655,8 @@ function HomeTab({ setActiveTab, nodeRef }) {
               textShadow: "1px 1px 2px rgba(0,0,0,0.3)"
             }}
           >
-            Invest in carbon credits to rescue our planet from impending doom!
-            This is sustainability so next-level, your mind might just explode
-            into glitter and unicorns.
+            Trade carbon credits to help rescue our planet from impending doom!
+            Experience sustainability on a whole new level—so revolutionary, it might just spark wonder and magic.
           </p>
           <img
             src="https://upload.wikimedia.org/wikipedia/commons/7/7f/Rotating_earth_animated_transparent.gif"
