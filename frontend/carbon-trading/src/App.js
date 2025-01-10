@@ -520,7 +520,7 @@ function App() {
                   just explode into glitter and unicorns.
                 </p>
                 <img
-                  src="https://media.giphy.com/media/l2QE3cCP0ws80i1FC/giphy.gif"
+                  src="https://upload.wikimedia.org/wikipedia/commons/7/7f/Rotating_earth_animated_transparent.gif"
                   alt="Over-the-top environment"
                   style={{
                     width: "120px",
