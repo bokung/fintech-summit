@@ -443,7 +443,7 @@ function App() {
         ====================================
       */}
       <div className="container py-4" style={{ flex: 1 }}>
-        <h1 className="mb-4">Carbon Credit Trading</h1>
+        <h1 className="mb-4" style={{ textAlign: 'center' }}>Carbon Credit Trading</h1>
 
         {/* MARKETPLACE TAB CONTENT */}
         {activeTab === "marketplace" && (
