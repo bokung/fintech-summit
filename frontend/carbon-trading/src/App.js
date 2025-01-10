@@ -11,6 +11,9 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { Modal, Button } from "react-bootstrap";
 import { CSSTransition, TransitionGroup } from "react-transition-group";
 
+// CSV parsing library
+import Papa from "papaparse";
+
 // Chart.js imports
 import {
   Chart as ChartJS,
@@ -54,7 +57,32 @@ const priceHistoryData = [
   { timestamp: 1704067200, price: "95" },
   { timestamp: 1704153600, price: "98" },
   { timestamp: 1704240000, price: "102" },
-  // ... truncated for brevity, add the rest ...
+  { timestamp: 1704326400, price: "110" },
+  { timestamp: 1704412800, price: "108" },
+  { timestamp: 1704499200, price: "112" },
+  { timestamp: 1704585600, price: "115" },
+  { timestamp: 1704672000, price: "120" },
+  { timestamp: 1704758400, price: "118" },
+  { timestamp: 1704844800, price: "121" },
+  { timestamp: 1704931200, price: "123" },
+  { timestamp: 1705017600, price: "125" },
+  { timestamp: 1705104000, price: "128" },
+  { timestamp: 1705190400, price: "130" },
+  { timestamp: 1705276800, price: "127" },
+  { timestamp: 1705363200, price: "129" },
+  { timestamp: 1705449600, price: "135" },
+  { timestamp: 1705536000, price: "140" },
+  { timestamp: 1705622400, price: "137" },
+  { timestamp: 1705708800, price: "142" },
+  { timestamp: 1705795200, price: "145" },
+  { timestamp: 1705881600, price: "148" },
+  { timestamp: 1705968000, price: "152" },
+  { timestamp: 1706054400, price: "150" },
+  { timestamp: 1706140800, price: "155" },
+  { timestamp: 1706227200, price: "158" },
+  { timestamp: 1706313600, price: "160" },
+  { timestamp: 1706400000, price: "165" },
+  { timestamp: 1706486400, price: "168" },
   { timestamp: 1706572800, price: "172" }
 ];
 
@@ -71,7 +99,7 @@ function App() {
   const [batchMintNumber, setBatchMintNumber] = useState("1");
   const [batchMintUri, setBatchMintUri] = useState("");
 
-  // For redeeming
+  // For redeeming (single)
   const [redeemTokenId, setRedeemTokenId] = useState("");
   const [redeemEmissionId, setRedeemEmissionId] = useState("");
 
@@ -427,6 +455,9 @@ function App() {
             handleMarketplaceBalance={handleMarketplaceBalance}
             marketplaceCreditCount={marketplaceCreditCount}
             contractOwnerAddress={contractOwnerAddress}
+            carbonCreditContract={carbonCreditContract}
+            currentUserAddress={currentUserAddress}
+            handleShowPopup={handleShowPopup}
             nodeRef={nodeRefs["admin"]}
           />
         );
@@ -579,19 +610,9 @@ function App() {
           =================================
         */}
         <div className="container py-4" style={{ flex: 1 }}>
-          <h1
-            className="mb-4"
-            style={{
-              textAlign: "center",  // Centers the text
-              fontSize: "2.5rem",
-              fontWeight: "bold",
-              textShadow: "2px 2px 4px rgba(0,0,0,0.3)",
-              marginBottom: "20px"
-            }}
-          >
-            Beta 1.0.0: Carbon Trading Platform
+          <h1 className="mb-4" style={{ textAlign: "center" }}>
+            Carbon Credit Trading
           </h1>
-
 
           {/* 
             We use CSSTransition with nodeRef for each tab 
@@ -655,8 +676,9 @@ function HomeTab({ setActiveTab, nodeRef }) {
               textShadow: "1px 1px 2px rgba(0,0,0,0.3)"
             }}
           >
-            Trade carbon credits to help rescue our planet from impending doom!
-            Experience sustainability on a whole new level—so revolutionary, it might just spark wonder and magic.
+            Invest in carbon credits to rescue our planet from impending doom!
+            This is sustainability so next-level, your mind might just explode
+            into glitter and unicorns.
           </p>
           <img
             src="https://upload.wikimedia.org/wikipedia/commons/7/7f/Rotating_earth_animated_transparent.gif"
@@ -1073,7 +1095,12 @@ function AdminTab({
   handleMarketplaceBalance,
   marketplaceCreditCount,
   contractOwnerAddress,
-  nodeRef
+  nodeRef,
+
+  // Newly added for CSV redemption
+  carbonCreditContract,
+  currentUserAddress,
+  handleShowPopup
 }) {
   const fancyCardStyle = {
     border: "2px solid #0dcaf0",
@@ -1105,6 +1132,85 @@ function AdminTab({
     margin: 0
   };
 
+  // ~~~~~~~~~~~~~~~
+  // CSV Redemption States
+  // ~~~~~~~~~~~~~~~
+  const [emissionRecords, setEmissionRecords] = useState([]);
+  const [selectedTokenByEmission, setSelectedTokenByEmission] = useState({});
+  const [userTokenIds, setUserTokenIds] = useState([]);
+
+  // 1. Handle CSV file upload
+  const handleFileChange = (e) => {
+    if (e.target.files[0]) {
+      Papa.parse(e.target.files[0], {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          setEmissionRecords(results.data); // array of objects
+        },
+        error: (err) => {
+          console.error("Error parsing CSV:", err);
+          handleShowPopup("Error!", "Failed to parse CSV file.");
+        }
+      });
+    }
+  };
+
+  // 2. For each emission row, user selects which token to use
+  const handleSelectToken = (emissionId, tokenId) => {
+    setSelectedTokenByEmission((prev) => ({
+      ...prev,
+      [emissionId]: tokenId
+    }));
+  };
+
+  // 3. Redeem for one emission
+  const handleRedeemForEmission = async (emissionId) => {
+    try {
+      const chosenToken = selectedTokenByEmission[emissionId];
+      if (!chosenToken) {
+        handleShowPopup("Error!", "Please select a carbon credit token.");
+        return;
+      }
+
+      // Call contract function
+      const tx = await carbonCreditContract.redeemCarbonCredit(chosenToken, emissionId);
+      await tx.wait();
+
+      handleShowPopup(
+        "Redeemed",
+        `Token #${chosenToken} was redeemed for emission: ${emissionId}`
+      );
+    } catch (err) {
+      console.error(err);
+      handleShowPopup(
+        "Error!",
+        `Failed to redeem for emission ${emissionId}.`
+      );
+    }
+  };
+
+  // 4. Redeem all from CSV
+  const handleRedeemAll = async () => {
+    for (const record of emissionRecords) {
+      const emissionId = record.emissionId; // or however your CSV column is named
+      await handleRedeemForEmission(emissionId);
+    }
+  };
+
+  // 5. Fetch user's tokens (if you want to load them automatically or via button)
+  const fetchUserTokens = async (address) => {
+    if (!carbonCreditContract || !address) return;
+    try {
+      const tokenIds = await carbonCreditContract.getTokenIdsOfOwner(address);
+      setUserTokenIds(tokenIds.map((id) => id.toString()));
+    } catch (err) {
+      console.error("Error fetching user tokens:", err);
+      handleShowPopup("Error!", "Could not fetch user's token IDs.");
+    }
+  };
+
+  // If user is not owner, block access (same as existing code)
   if (!isUserOwner) {
     return (
       <div ref={nodeRef} className="alert alert-danger">
@@ -1115,6 +1221,7 @@ function AdminTab({
 
   return (
     <div ref={nodeRef}>
+      {/* MINTING SECTION */}
       <div style={fancyCardStyle}>
         <div style={fancyCardHeader}>
           <h3 style={bigHeadingStyle}>Mint Carbon Credits (Batch)</h3>
@@ -1160,6 +1267,7 @@ function AdminTab({
         </div>
       </div>
 
+      {/* REDEEM SINGLE SECTION */}
       <div style={fancyCardStyle}>
         <div style={fancyCardHeader}>
           <h3 style={bigHeadingStyle}>Redeem a Carbon Credit</h3>
@@ -1190,6 +1298,7 @@ function AdminTab({
         </div>
       </div>
 
+      {/* CHECK TOKEN OWNER SECTION */}
       <div style={fancyCardStyle}>
         <div style={fancyCardHeader}>
           <h3 style={bigHeadingStyle}>Check Owner of a Token</h3>
@@ -1220,6 +1329,7 @@ function AdminTab({
         </div>
       </div>
 
+      {/* MARKETPLACE BALANCE SECTION */}
       <div style={fancyCardStyle}>
         <div style={fancyCardHeader}>
           <h3 style={bigHeadingStyle}>Get Marketplace Balance</h3>
@@ -1241,6 +1351,7 @@ function AdminTab({
         </div>
       </div>
 
+      {/* CONTRACT OWNER SECTION */}
       <div style={fancyCardStyle}>
         <div style={fancyCardHeader}>
           <h3 style={bigHeadingStyle}>Contract Owner</h3>
@@ -1248,6 +1359,90 @@ function AdminTab({
         <div style={fancyCardBody}>
           <p>CarbonCredit Contract Owner:</p>
           <strong>{contractOwnerAddress}</strong>
+        </div>
+      </div>
+
+      {/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+          NEW SECTION: CSV-BASED REDEMPTION
+          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */}
+      <div style={fancyCardStyle}>
+        <div style={fancyCardHeader}>
+          <h3 style={bigHeadingStyle}>Redeem Emissions from CSV</h3>
+        </div>
+        <div style={fancyCardBody}>
+          <div className="mb-3">
+            <label className="form-label">Upload Emission CSV:</label>
+            <input
+              type="file"
+              className="form-control"
+              accept=".csv"
+              onChange={handleFileChange}
+            />
+          </div>
+
+          <div className="mb-3">
+            <button
+              className="btn btn-secondary animated-btn"
+              onClick={() => fetchUserTokens(currentUserAddress)}
+            >
+              Load My Carbon Credits
+            </button>
+          </div>
+
+          {emissionRecords.length > 0 && (
+            <table className="table table-bordered">
+              <thead>
+                <tr>
+                  <th>Emission ID</th>
+                  <th>Quantity (Tons)</th> {/* example column */}
+                  <th>Select Carbon Credit (Token ID)</th>
+                  <th>Redeem Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {emissionRecords.map((record, idx) => {
+                  const emissionId = record.emissionId; // match CSV header
+                  const quantity = record.quantity; // match CSV header
+                  return (
+                    <tr key={idx}>
+                      <td>{emissionId}</td>
+                      <td>{quantity}</td>
+                      <td>
+                        <select
+                          className="form-select"
+                          value={selectedTokenByEmission[emissionId] || ""}
+                          onChange={(e) =>
+                            handleSelectToken(emissionId, e.target.value)
+                          }
+                        >
+                          <option value="">-- Select Token --</option>
+                          {userTokenIds.map((tid) => (
+                            <option key={tid} value={tid}>
+                              {tid}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>
+                        <button
+                          className="btn btn-primary animated-btn"
+                          onClick={() => handleRedeemForEmission(emissionId)}
+                        >
+                          Redeem
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+
+          {emissionRecords.length > 0 && (
+            <button className="btn btn-success mt-2 animated-btn" onClick={handleRedeemAll}>
+              Redeem All Emissions
+            </button>
+          )}
         </div>
       </div>
     </div>
