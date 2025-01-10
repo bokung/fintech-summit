@@ -26,6 +26,7 @@ import carbonCreditABI from "./contracts/CarbonCredit.json";
 import marketplaceABI from "./contracts/CarbonCreditMarketplace.json";
 
 // Import icons for collapsed sidebar
+import homeIcon from "./icons/home.png";         // New Home Icon Import
 import marketplaceIcon from "./icons/marketplace.png";
 import userIcon from "./icons/user.png";
 import adminIcon from "./icons/admin.png";
@@ -41,9 +42,6 @@ ChartJS.register(
   Legend
 );
 
-// You should update these to match the addresses of your deployed contracts:
-// const CARBON_CREDIT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642F64180aa3";
-// const MARKETPLACE_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
 const CARBON_CREDIT_ADDRESS = "0x5fbdb2315678afecb367f032d93f642f64180aa3";
 const MARKETPLACE_ADDRESS = "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512";
 
@@ -130,7 +128,7 @@ function App() {
 
   // Sidebar / Tab state
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState("marketplace"); // "marketplace", "user", or "admin"
+  const [activeTab, setActiveTab] = useState("home"); // Default to "home" tab
 
   // Check if current user is contract owner
   const isUserOwner =
@@ -396,6 +394,19 @@ function App() {
 
         {/* Navigation Items */}
         <div style={{ marginTop: "60px" }}>
+          {/* Home Tab */}
+          <div
+            className={`p-2 ${activeTab === "home" ? "bg-primary text-white" : ""}`}
+            style={{ cursor: "pointer" }}
+            onClick={() => setActiveTab("home")}
+          >
+            {isSidebarCollapsed ? (
+              <img src={homeIcon} alt="Home" style={{ width: "24px", height: "24px" }} />
+            ) : (
+              "Home"
+            )}
+          </div>
+
           <div
             className={`p-2 ${activeTab === "marketplace" ? "bg-primary text-white" : ""}`}
             style={{ cursor: "pointer" }}
@@ -444,6 +455,16 @@ function App() {
       */}
       <div className="container py-4" style={{ flex: 1 }}>
         <h1 className="mb-4" style={{ textAlign: 'center' }}>Carbon Credit Trading</h1>
+
+        {/* HOME TAB CONTENT */}
+        {activeTab === "home" && (
+          <div className="card mb-4">
+            <div className="card-body">
+              <h2>Welcome to the Carbon Credit Trading App</h2>
+              <p>This is the home page.</p>
+            </div>
+          </div>
+        )}
 
         {/* MARKETPLACE TAB CONTENT */}
         {activeTab === "marketplace" && (
@@ -743,7 +764,7 @@ function App() {
  * Separate component to render the line chart using Chart.js + react-chartjs-2.
  */
 function PriceHistoryChart() {
-  // Convert your JSON data (timestamp/price) to arrays for Chart.js
+  // Convert JSON data (timestamp/price) to arrays for Chart.js
   const labels = priceHistoryData.map((point) =>
     new Date(point.timestamp * 1000).toLocaleDateString()
   );
