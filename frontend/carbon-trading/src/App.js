@@ -7,8 +7,6 @@ import {
   formatEther
 } from "ethers";
 import "bootstrap/dist/css/bootstrap.min.css";
-
-// Chart.js imports
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -21,17 +19,14 @@ import {
 } from "chart.js";
 import { Line } from "react-chartjs-2";
 
-// --- Import the ABI JSON for each contract
 import carbonCreditABI from "./contracts/CarbonCredit.json";
 import marketplaceABI from "./contracts/CarbonCreditMarketplace.json";
 
-// Import icons for collapsed sidebar
-import homeIcon from "./icons/home.png";         // New Home Icon Import
+import homeIcon from "./icons/home.png";
 import marketplaceIcon from "./icons/marketplace.png";
 import userIcon from "./icons/user.png";
 import adminIcon from "./icons/admin.png";
 
-// Register Chart.js components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -45,9 +40,6 @@ ChartJS.register(
 const CARBON_CREDIT_ADDRESS = "0x5fbdb2315678afecb367f032d93f642f64180aa3";
 const MARKETPLACE_ADDRESS = "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512";
 
-// ---------------------------------------------
-// SAMPLE PRICE HISTORY DATA (30+ entries)
-// ---------------------------------------------
 const priceHistoryData = [
   { timestamp: 1704067200, price: "95" },
   { timestamp: 1704153600, price: "98" },
@@ -82,9 +74,10 @@ const priceHistoryData = [
 ];
 
 function App() {
-  // ---------------------------------------------
-  // State hooks
-  // ---------------------------------------------
+  // Dark mode state
+  const [darkMode, setDarkMode] = useState(false);
+  const toggleDarkMode = () => setDarkMode((prev) => !prev);
+
   const [signer, setSigner] = useState(null);
   const [provider, setProvider] = useState(null);
 
@@ -128,17 +121,13 @@ function App() {
 
   // Sidebar / Tab state
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState("home"); // Default to "home" tab
+  const [activeTab, setActiveTab] = useState("home");
 
-  // Check if current user is contract owner
   const isUserOwner =
     currentUserAddress &&
     contractOwnerAddress &&
     currentUserAddress.toLowerCase() === contractOwnerAddress.toLowerCase();
 
-  // ---------------------------------------------
-  // Connect wallet + instantiate contracts
-  // ---------------------------------------------
   useEffect(() => {
     const init = async () => {
       if (!window.ethereum) {
@@ -147,20 +136,16 @@ function App() {
       }
 
       try {
-        // Request user to connect their wallet
         await window.ethereum.request({ method: "eth_requestAccounts" });
 
-        // In ethers v6, we use BrowserProvider
         const _provider = new BrowserProvider(window.ethereum);
         const _signer = await _provider.getSigner();
 
-        // Instantiate the contracts
         const ccContract = new Contract(
           CARBON_CREDIT_ADDRESS,
           carbonCreditABI.abi,
           _signer
         );
-
         const mpContract = new Contract(
           MARKETPLACE_ADDRESS,
           marketplaceABI.abi,
@@ -172,13 +157,11 @@ function App() {
         setCarbonCreditContract(ccContract);
         setMarketplaceContract(mpContract);
 
-        // Fetch addresses for user and contract owner
         const addr = await _signer.getAddress();
         setCurrentUserAddress(addr);
 
         const owner = await ccContract.owner();
         setContractOwnerAddress(owner);
-
       } catch (err) {
         console.error("Error initializing contracts or wallet:", err);
       }
@@ -187,16 +170,12 @@ function App() {
     init();
   }, []);
 
-  // ---------------------------------------------
-  // Marketplace Handlers
-  // ---------------------------------------------
+  // Handler functions
   const handleListForSale = async () => {
     if (!marketplaceContract) return;
-
     try {
       const tokenIdBN = listTokenId;
       const priceBN = parseUnits(listPrice, 18);
-
       const tx = await marketplaceContract.listCreditForSale(tokenIdBN, priceBN);
       await tx.wait();
       alert(`Listed token #${listTokenId} for sale at ${listPrice} XRPL tokens.`);
@@ -208,11 +187,9 @@ function App() {
 
   const handleBuyCredit = async () => {
     if (!marketplaceContract) return;
-
     try {
       const tokenIdBN = buyTokenId;
       const offerBN = parseUnits(buyOfferPrice, 18);
-
       const tx = await marketplaceContract.buyCredit(tokenIdBN, offerBN);
       await tx.wait();
       alert(`Bought token #${buyTokenId} for ${buyOfferPrice} XRPL tokens.`);
@@ -224,7 +201,6 @@ function App() {
 
   const fetchAllListings = async () => {
     if (!marketplaceContract) return;
-
     try {
       const items = await marketplaceContract.getAllListingsSortedByPrice();
       setListings(items);
@@ -234,15 +210,11 @@ function App() {
     }
   };
 
-  // ---------------------------------------------
-  // User Handlers
-  // ---------------------------------------------
   const handleCheckUserBalance = async () => {
     if (!provider || !signer) return;
     try {
       const userAddr = await signer.getAddress();
       const bal = await provider.getBalance(userAddr);
-      // Convert from wei to ETH
       setCurrentUserBalance(formatEther(bal));
     } catch (err) {
       console.error(err);
@@ -275,31 +247,24 @@ function App() {
     }
   };
 
-  // ---------------------------------------------
-  // Admin Handlers
-  // ---------------------------------------------
   const handleMintBatch = async () => {
     if (!carbonCreditContract || !signer) return;
-
     try {
       const numberOfCredits = batchMintNumber;
       const toAddress =
         mintToAddress && mintToAddress.trim() !== ""
           ? mintToAddress
           : await signer.getAddress();
-
       const uri =
         batchMintUri && batchMintUri.trim() !== ""
           ? batchMintUri
           : defaultBaseUri;
-
       const tx = await carbonCreditContract.mintCarbonCreditsBatch(
         toAddress,
         numberOfCredits,
         uri
       );
       await tx.wait();
-
       alert(
         `Successfully minted ${batchMintNumber} credits to ${toAddress}! (URI: ${uri})`
       );
@@ -311,7 +276,6 @@ function App() {
 
   const handleRedeem = async () => {
     if (!carbonCreditContract) return;
-
     try {
       const tx = await carbonCreditContract.redeemCarbonCredit(
         redeemTokenId,
@@ -349,33 +313,31 @@ function App() {
     }
   };
 
-  // ---------------------------------------------
-  // Simple toggler for side nav
-  // ---------------------------------------------
   const toggleSidebar = () => {
     setIsSidebarCollapsed((prev) => !prev);
   };
 
-  // ---------------------------------------------
-  // UI Rendering
-  // ---------------------------------------------
   return (
-    <div style={{ display: "flex", minHeight: "100vh", overflow: "hidden" }}>
-      {/* 
-        ====================================
-        Side Navigation Panel 
-        ====================================
-      */}
+    <div
+      style={{
+        display: "flex",
+        minHeight: "100vh",
+        overflow: "hidden",
+        backgroundColor: darkMode ? "#121212" : "#ffffff",
+        color: darkMode ? "white" : "black"
+      }}
+    >
+      {/* Side Navigation Panel */}
       <div
         style={{
           width: isSidebarCollapsed ? "60px" : "250px",
-          backgroundColor: "#f8f9fa",
+          backgroundColor: darkMode ? "#333" : "#f8f9fa",
           borderRight: "1px solid #ddd",
           transition: "width 0.3s ease",
-          position: "relative"
+          position: "relative",
+          color: darkMode ? "white" : "black"
         }}
       >
-        {/* Collapse button */}
         <button
           style={{
             position: "absolute",
@@ -391,10 +353,7 @@ function App() {
         >
           {isSidebarCollapsed ? ">" : "<"}
         </button>
-
-        {/* Navigation Items */}
         <div style={{ marginTop: "60px" }}>
-          {/* Home Tab */}
           <div
             className={`p-2 ${activeTab === "home" ? "bg-primary text-white" : ""}`}
             style={{ cursor: "pointer" }}
@@ -406,7 +365,6 @@ function App() {
               "Home"
             )}
           </div>
-
           <div
             className={`p-2 ${activeTab === "marketplace" ? "bg-primary text-white" : ""}`}
             style={{ cursor: "pointer" }}
@@ -433,7 +391,6 @@ function App() {
               "User"
             )}
           </div>
-          {/* Admin Tab - Always Visible */}
           <div
             className={`p-2 ${activeTab === "admin" ? "bg-primary text-white" : ""}`}
             style={{ cursor: "pointer" }}
@@ -448,17 +405,29 @@ function App() {
         </div>
       </div>
 
-      {/* 
-        ====================================
-        Main Content Area 
-        ====================================
-      */}
-      <div className="container py-4" style={{ flex: 1 }}>
-        <h1 className="mb-4" style={{ textAlign: 'center' }}>Carbon Credit Trading</h1>
+      {/* Main Content Area */}
+      <div
+        className="container py-4"
+        style={{
+          flex: 1,
+          backgroundColor: darkMode ? "#121212" : "#ffffff",
+          color: darkMode ? "white" : "black"
+        }}
+      >
+        <h1 className="mb-4" style={{ textAlign: "center" }}>
+          Carbon Credit Trading
+        </h1>
+
+        {/* Dark Mode Toggle Button */}
+        <div className="d-flex justify-content-end mb-3">
+          <button className="btn btn-secondary" onClick={toggleDarkMode}>
+            {darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          </button>
+        </div>
 
         {/* HOME TAB CONTENT */}
         {activeTab === "home" && (
-          <div className="card mb-4">
+          <div className={`card mb-4 ${darkMode ? "bg-dark text-light" : ""}`}>
             <div className="card-body">
               <h2>Welcome to the Carbon Credit Trading App</h2>
               <p>This is the home page.</p>
@@ -469,7 +438,7 @@ function App() {
         {/* MARKETPLACE TAB CONTENT */}
         {activeTab === "marketplace" && (
           <>
-            <div className="card mb-4">
+            <div className={`card mb-4 ${darkMode ? "bg-dark text-light" : ""}`}>
               <div className="card-header">List Carbon Credit for Sale</div>
               <div className="card-body">
                 <p className="text-muted">
@@ -499,7 +468,7 @@ function App() {
               </div>
             </div>
 
-            <div className="card mb-4">
+            <div className={`card mb-4 ${darkMode ? "bg-dark text-light" : ""}`}>
               <div className="card-header">Buy a Carbon Credit</div>
               <div className="card-body">
                 <div className="mb-3">
@@ -526,7 +495,7 @@ function App() {
               </div>
             </div>
 
-            <div className="card mb-4">
+            <div className={`card mb-4 ${darkMode ? "bg-dark text-light" : ""}`}>
               <div className="card-header d-flex justify-content-between align-items-center">
                 <span>Active Listings</span>
                 <button
@@ -560,15 +529,14 @@ function App() {
               </div>
             </div>
 
-            {/* Price History */}
-            <PriceHistoryChart />
+            <PriceHistoryChart darkMode={darkMode} />
           </>
         )}
 
         {/* USER TAB CONTENT */}
         {activeTab === "user" && (
           <>
-            <div className="card mb-4">
+            <div className={`card mb-4 ${darkMode ? "bg-dark text-light" : ""}`}>
               <div className="card-header">Check My ETH Balance</div>
               <div className="card-body">
                 <button className="btn btn-info mb-2" onClick={handleCheckUserBalance}>
@@ -583,7 +551,7 @@ function App() {
               </div>
             </div>
 
-            <div className="card mb-4">
+            <div className={`card mb-4 ${darkMode ? "bg-dark text-light" : ""}`}>
               <div className="card-header">Check Tokens of an Address</div>
               <div className="card-body">
                 <div className="mb-3">
@@ -604,8 +572,6 @@ function App() {
                     Get Marketplace Tokens
                   </button>
                 </div>
-
-                {/* Display the tokens */}
                 <h5>Token IDs Found:</h5>
                 {ownerTokens.length === 0 ? (
                   <p>No tokens found.</p>
@@ -619,7 +585,7 @@ function App() {
               </div>
             </div>
 
-            <div className="card mb-4">
+            <div className={`card mb-4 ${darkMode ? "bg-dark text-light" : ""}`}>
               <div className="card-header">My Account</div>
               <div className="card-body">
                 <div className="mb-2">
@@ -637,7 +603,7 @@ function App() {
         {activeTab === "admin" && (
           isUserOwner ? (
             <>
-              <div className="card mb-4">
+              <div className={`card mb-4 ${darkMode ? "bg-dark text-light" : ""}`}>
                 <div className="card-header">Mint Carbon Credits (Batch)</div>
                 <div className="card-body">
                   <div className="mb-3">
@@ -677,7 +643,7 @@ function App() {
                 </div>
               </div>
 
-              <div className="card mb-4">
+              <div className={`card mb-4 ${darkMode ? "bg-dark text-light" : ""}`}>
                 <div className="card-header">Redeem a Carbon Credit</div>
                 <div className="card-body">
                   <div className="mb-3">
@@ -704,7 +670,7 @@ function App() {
                 </div>
               </div>
 
-              <div className="card mb-4">
+              <div className={`card mb-4 ${darkMode ? "bg-dark text-light" : ""}`}>
                 <div className="card-header">Check Owner of a Token</div>
                 <div className="card-body">
                   <div className="mb-3">
@@ -726,7 +692,7 @@ function App() {
                 </div>
               </div>
 
-              <div className="card mb-4">
+              <div className={`card mb-4 ${darkMode ? "bg-dark text-light" : ""}`}>
                 <div className="card-header">Get Marketplace Balance</div>
                 <div className="card-body">
                   <button className="btn btn-info mb-2" onClick={handleMarketplaceBalance}>
@@ -741,7 +707,7 @@ function App() {
                 </div>
               </div>
 
-              <div className="card mb-4">
+              <div className={`card mb-4 ${darkMode ? "bg-dark text-light" : ""}`}>
                 <div className="card-header">Contract Owner</div>
                 <div className="card-body">
                   <p>CarbonCredit Contract Owner:</p>
@@ -760,11 +726,7 @@ function App() {
   );
 }
 
-/**
- * Separate component to render the line chart using Chart.js + react-chartjs-2.
- */
-function PriceHistoryChart() {
-  // Convert JSON data (timestamp/price) to arrays for Chart.js
+function PriceHistoryChart({ darkMode }) {
   const labels = priceHistoryData.map((point) =>
     new Date(point.timestamp * 1000).toLocaleDateString()
   );
@@ -789,27 +751,41 @@ function PriceHistoryChart() {
     plugins: {
       title: {
         display: true,
-        text: "Price History of Carbon Credits"
+        text: "Price History of Carbon Credits",
+        color: darkMode ? "white" : "black"
+      },
+      legend: {
+        labels: {
+          color: darkMode ? "white" : "black"
+        }
       }
     },
     scales: {
       y: {
         title: {
           display: true,
-          text: "Price (XRPL)"
+          text: "Price (XRPL)",
+          color: darkMode ? "white" : "black"
+        },
+        ticks: {
+          color: darkMode ? "white" : "black"
         }
       },
       x: {
         title: {
           display: true,
-          text: "Date"
+          text: "Date",
+          color: darkMode ? "white" : "black"
+        },
+        ticks: {
+          color: darkMode ? "white" : "black"
         }
       }
     }
   };
 
   return (
-    <div className="card mb-4">
+    <div className={`card mb-4 ${darkMode ? "bg-dark text-light" : ""}`}>
       <div className="card-header">Price History (Line Chart)</div>
       <div className="card-body">
         <Line data={data} options={options} />
