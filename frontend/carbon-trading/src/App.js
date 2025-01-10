@@ -26,7 +26,7 @@ import carbonCreditABI from "./contracts/CarbonCredit.json";
 import marketplaceABI from "./contracts/CarbonCreditMarketplace.json";
 
 // Import icons for collapsed sidebar
-import homeIcon from "./icons/home.png";         // New Home Icon Import
+import homeIcon from "./icons/home.png";
 import marketplaceIcon from "./icons/marketplace.png";
 import userIcon from "./icons/user.png";
 import adminIcon from "./icons/admin.png";
@@ -46,7 +46,7 @@ const CARBON_CREDIT_ADDRESS = "0x5fbdb2315678afecb367f032d93f642f64180aa3";
 const MARKETPLACE_ADDRESS = "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512";
 
 // ---------------------------------------------
-// SAMPLE PRICE HISTORY DATA (30+ entries)
+// SAMPLE PRICE HISTORY DATA
 // ---------------------------------------------
 const priceHistoryData = [
   { timestamp: 1704067200, price: "95" },
@@ -479,71 +479,109 @@ function App() {
         {/* HOME TAB CONTENT */}
         {activeTab === "home" && (
           <>
-            {/* Hero Banner Section */}
-            <div className="card mb-4">
+            {/* Hero Banner with flamboyant design */}
+            <div
+              className="card mb-4"
+              style={{
+                border: "0",
+                boxShadow: "0 0 20px rgba(0,0,0,0.2)",
+                overflow: "hidden"
+              }}
+            >
               <div
-                className="card-body"
                 style={{
                   background:
-                    "url('https://images.unsplash.com/photo-1548767797-a1f5d87fdcf1') center/cover",
-                  minHeight: "250px",
+                    "linear-gradient(rgba(0, 0, 0, 0.6), rgba(0,0,0,0.5)), url('https://images.unsplash.com/photo-1580894908361-f58293c25d5b') center/cover",
+                  minHeight: "300px",
                   color: "#fff",
-                  borderRadius: "5px"
+                  padding: "30px"
                 }}
               >
-                <h2 style={{ fontWeight: "bold" }}>Protect the Planet</h2>
-                <p>
-                  Invest in carbon credits to offset emissions and support
-                  greener initiatives worldwide.
+                <h2 style={{ fontWeight: "900", fontSize: "2.5rem" }}>
+                  Make Earth Proud
+                </h2>
+                <p style={{ fontSize: "1.2rem", maxWidth: "600px" }}>
+                  Join our quest to preserve the planet through carbon credit
+                  trading. Because a sustainable tomorrow is the real treasure,
+                  and it’s so breathtaking you might need fresh pants.
                 </p>
-                <button className="btn btn-light">Get Started</button>
+                {/* We removed the "Get Started" button here */}
               </div>
             </div>
 
-            {/* Additional Steps / Info */}
-            <div className="row">
+            {/* Over-the-top Steps Section */}
+            <div
+              className="row"
+              style={{
+                animation: "pulse 2s infinite alternate",
+                "@keyframes pulse": {
+                  "0%": { transform: "scale(1)" },
+                  "100%": { transform: "scale(1.02)" }
+                }
+              }}
+            >
               <div className="col-md-4 mb-4">
-                <div className="card h-100">
+                <div
+                  className="card h-100"
+                  style={{ border: "2px solid #28a745" }}
+                >
                   <div className="card-body">
-                    <h5 className="card-title">Step 1</h5>
-                    <p className="card-text">
-                      Create an account or connect your wallet to begin trading
-                      carbon credits.
+                    <h3 style={{ color: "#28a745", fontWeight: "bold" }}>
+                      Step 1
+                    </h3>
+                    <p className="card-text" style={{ fontSize: "1.1rem" }}>
+                      Connect your wallet or create an account to start your
+                      carbon credit journey—feel the excitement building
+                      already!
                     </p>
-                    <button className="btn btn-primary">Sign Up</button>
-                  </div>
-                </div>
-              </div>
-              <div className="col-md-4 mb-4">
-                <div className="card h-100">
-                  <div className="card-body">
-                    <h5 className="card-title">Step 2</h5>
-                    <p className="card-text">
-                      Browse our marketplace to find carbon credits that match
-                      your sustainability goals.
-                    </p>
-                    <button
-                      className="btn btn-success"
-                      onClick={() => setActiveTab("marketplace")}
-                    >
-                      Explore Marketplace
+                    <button className="btn btn-primary">
+                      I'm So Ready!
                     </button>
                   </div>
                 </div>
               </div>
               <div className="col-md-4 mb-4">
-                <div className="card h-100">
+                <div
+                  className="card h-100"
+                  style={{ border: "2px solid #17a2b8" }}
+                >
                   <div className="card-body">
-                    <h5 className="card-title">Step 3</h5>
-                    <p className="card-text">
-                      Track your credits and redeem them to offset real-world
-                      emissions for a cleaner future.
+                    <h3 style={{ color: "#17a2b8", fontWeight: "bold" }}>
+                      Step 2
+                    </h3>
+                    <p className="card-text" style={{ fontSize: "1.1rem" }}>
+                      Jump into our crazy-fun marketplace to buy, sell, or
+                      trade carbon credits. It's like collecting trading cards—
+                      for the environment!
+                    </p>
+                    <button
+                      className="btn btn-success"
+                      onClick={() => setActiveTab("marketplace")}
+                    >
+                      To The Marketplace!
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="col-md-4 mb-4">
+                <div
+                  className="card h-100"
+                  style={{ border: "2px solid #ffc107" }}
+                >
+                  <div className="card-body">
+                    <h3 style={{ color: "#ffc107", fontWeight: "bold" }}>
+                      Step 3
+                    </h3>
+                    <p className="card-text" style={{ fontSize: "1.1rem" }}>
+                      Redeem credits to offset real-world emissions, showing
+                      mother nature some love. Then watch your karma points
+                      skyrocket.
                     </p>
                     <button
                       className="btn btn-warning"
                       onClick={() => setActiveTab("admin")}
                     >
-                      Redeem Credits
+                      Offset My Emissions
                     </button>
                   </div>
                 </div>
