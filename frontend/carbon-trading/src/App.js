@@ -851,7 +851,7 @@ function App() {
             <>
               <div style={fancyCardStyle}>
                 <div style={fancyCardHeader}>
-                  <h3 style={bigHeadingStyle}>Check My ETH Balance</h3>
+                  <h3 style={bigHeadingStyle}>Check My XRPL Balance</h3>
                 </div>
                 <div style={fancyCardBody}>
                   <button
@@ -861,7 +861,7 @@ function App() {
                     Check Balance
                   </button>
                   <div>
-                    <label style={{ fontWeight: "bold" }}>Balance (ETH): </label>
+                    <label style={{ fontWeight: "bold" }}>Balance (XRPL): </label>
                     <span className="ms-2">
                       {currentUserBalance || "Not fetched yet"}
                     </span>
@@ -1019,7 +1019,7 @@ function App() {
                   </div>
                   <div style={fancyCardBody}>
                     <p className="text-muted">
-                      Unsure who owns that NFT? Check here:
+                      Unsure who owns that Carbon Credit Token? Check here:
                     </p>
                     <div className="mb-3">
                       <label>Token ID:</label>
