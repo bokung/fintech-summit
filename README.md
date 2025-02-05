@@ -1,8 +1,6 @@
 # Demo
 
-<video width="600" controls>
-  <source src="https://github.com/bokung/fintech-summit/blob/main/demo.mp4" type="video/mp4">
-</video>
+https://github.com/user-attachments/assets/0f1626d6-d117-4104-9c80-bc1d840cf190
 
 # Instructions to run
 
